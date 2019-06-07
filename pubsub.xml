@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- name="GENERATOR" content="github.com/mmarkdown/mmark Mmark Markdown Processor - mmark.nl" -->
+<rfc version="3" ipr="trust200902" submissionType="IETF" category="std" xml:lang="en" consensus="true" xmlns:xi="http://www.w3.org/2001/XInclude"  docName="draft-xie-bidirectional-messaging-01">
+
+<front>
+<title abbrev="bidirectional messaging">An HTTP/2 extension for bidirectional messaging communication</title><seriesInfo value="draft-xie-bidirectional-messaging-00" stream="IETF" status="standard" name="Internet-Draft"></seriesInfo>
+<author initials="G." surname="Xie" fullname="Guowu Xie"><organization>Facebook Inc.</organization><address><postal><street>1 Hacker Way</street>
+<city>Menlo Park</city>
+<code>CA 94025</code>
+<country>U.S.A.</country>
+</postal><email>woo@fb.com</email>
+</address></author>
+<author initials="A." surname="Frindell" fullname="Alan Frindell"><organization>Facebook Inc.</organization><address><postal><street></street>
+</postal><email>afrind@fb.com</email>
+</address></author>
+<date/>
+<area>Internet</area>
+<workgroup>httpbis Working Group</workgroup>
+<keyword>Internet-Draft</keyword>
+
+<abstract>
+<t>This draft proposes a http2 protocol extension, which enables
+bidirectional messaging communication between client and server.</t>
+</abstract>
+
+</front>
+
+<middle>
+
+<section anchor="introduction"><name>Introduction</name>
+<t>HTTP/2 is the de facto application protocol in Internet. The optimizations
+developed in HTTP/2, like stream multiplexing, header compression, and binary
+message framing are very generic. They can be useful in non web browsing
+applications, for example, Publish/Subscribe, RPC. However, the request/response
+from client to server communication pattern limits HTTP/2 from wider use in
+these applications. This draft proposes a HTTP/2 protocol extension, which
+enables bidirectional messaging between client and server.</t>
+<t>The only mechanism HTTP/2 provides for server to client communication is
+PUSH<em>PROMISE. While this satisfies some use-cases, it is unidirectional, i.g.
+the client cannot respond. In this draft, a new frame is introduced which has
+the routing properties of PUSH</em>PROMISE and the bi-directionality of HEADERS.
+Further, clients are also able group streams together for routing purposes, such
+that each individual stream does not need to carry additional routing
+information.</t>
+</section>
+
+<section anchor="conventions-and-terminology"><name>Conventions and Terminology</name>
+<t>The keywords <bcp14>MUST</bcp14>, <bcp14>MUST NOT</bcp14>, <bcp14>REQUIRED</bcp14>, <bcp14>SHALL</bcp14>, <bcp14>SHALL NOT</bcp14>,
+<bcp14>SHOULD</bcp14>, <bcp14>SHOULD NOT</bcp14>, <bcp14>RECOMMENDED</bcp14>, <bcp14>MAY</bcp14>, and <bcp14>OPTIONAL</bcp14>, when
+they appear in this document, are to be interpreted as described in <xref target="RFC2119"></xref>.</t>
+<t>All the terms defined in the Conventions and Terminology section in <xref target="RFC7540"></xref>
+apply to this document.</t>
+</section>
+
+<section anchor="solution-overview"><name>Solution Overview</name>
+
+<section anchor="routing-stream-and-exstream"><name>Routing Stream and ExStream</name>
+<t>A routing stream (RStream) is a long lived HTTP/2 stream in nature. RStreams are
+initiated by clients, and can be routed independently by any intermediaries.
+Though an RStream is effectively a regular HTTP/2 stream, RStreams are
+recommended for exchanging metadata, but not user data.</t>
+<t>A new HTTP/2 stream called ExStream is introduced for exchanging user data.
+ExStreams are recommended for short lived transactions, so intermediaries and
+servers can gracefully shutdown ExStreams within a short time. The typical use
+case can be a subscription or publish request/response in Publish/Subscribe use
+case, or an RPC call between two endpoints.</t>
+<t>An ExStream is opened by an EX_HEADERS frame, and continued by CONTINUATION and
+DATA frames. An ExStream <bcp14>MUST</bcp14> be associated with an open RStream, and
+<bcp14>MUST NOT</bcp14> be associated with any other ExStream. ExStreams are routed
+according to their RStreams by intermediaries and servers. Effectively, all
+ExStreams with the same RStream form a logical stream group, and are routed to
+the same endpoint.</t>
+</section>
+
+<section anchor="bidirectional-messaging-communication"><name>Bidirectional Messaging Communication</name>
+<t>With RStreams and ExStreams, HTTP/2 can be used for bidirectional messaging
+communication. As shown in the follow diagrams, after an RStream is open from
+client to server, either endpoint can initiate an ExStreams to its peer.</t>
+<figure anchor="fig-client-to-server"><name>Client initiates the ExStream to server, after an RStream is open.
+</name>
+<artwork>+--------+   RStream (5)   +---------+    RStream (1)   +--------+
+| client |&gt;---------------&gt;|  proxy  |&gt;----------------&gt;| server |
++--------+                 +---------+                  +--------+
+    v                        ^     v                        ^
+    |    ExStream(7, RS=5)   |     |    ExStream(3, RS=1)   |
+    +------------------------+     +------------------------+
+</artwork>
+</figure>
+<figure anchor="fig-server-to-client"><name>Server initiates the ExStream to client, after an RStream is open.
+</name>
+<artwork>+--------+   RStream (5)   +---------+    RStream (1)   +--------+
+| client |&gt;---------------&gt;|  proxy  |&gt;----------------&gt;| server |
++--------+                 +---------+                  +--------+
+     ^                        v     ^                        v
+     |    ExStream(4, RS=5)   |     |    ExStream(2, RS=1)   |
+     +------------------------+     +------------------------+
+</artwork>
+</figure>
+<t>Beyond that, clients can multiplex RStreams, ExStreams and regular HTTP/2
+streams into one HTTP/2 connection. This enables clients to access different
+services without initiating new TCP connections. This avoids the latency cost of
+setting up new connections. This is more desirable for mobile devices because
+they usually have longer RTT and battery constraints. Multiplexing these
+services also allows them to share a single TCP connection congestion control
+context.</t>
+<t>As shown in the following diagram, the client can exchange data with PubSub, RPC
+and CDN three different services with one TCP connection.</t>
+<figure anchor="fig-multiplex"><name>Client opens multiple RStreams and a HTTP/2 stream within one HTTP/2
+connection.
+</name>
+<artwork>+--------+   RStream (5)   +---------+    RStream (1)   +----------+
+| client |&gt;---------------&gt;|  proxy  |&gt;----------------&gt;|  PUBSUB  |
++--------+                 +---------+                  +----------+
+  v   v                     ^ ^  v  v
+  |   |     RStream (7)    /  |  |   \    RStream (5)   +----------+
+  |   +-------------------+   |  |    +----------------&gt;|    RPC   |
+  |                           |  |                      +----------+
+  |                           |  |  
+  |         Stream (9)        |  |      Stream (7)      +----------+
+  +---------------------------+  +---------------------&gt;|    CDN   |
+                                                        +----------+
+</artwork>
+</figure>
+</section>
+
+<section anchor="states-of-rstream-and-exstream"><name>States of RStream and ExStream</name>
+<t>RStreams are regular HTTP/2 streams that follow the stream lifecycle in
+<xref target="RFC7540"></xref>, section 5.1. ExStreams use the same lifecycle as regular HTTP/2
+streams, but also depend on their RStreams. If a RStream is reset, endpoints
+<bcp14>MUST</bcp14> reset the ExStreams associated with that RStream. If the RStream is
+closed, endpoints SHOULD allow existing ExStreams complete normally. The RStream
+SHOULD remain open while communication is ongoing. Endpoints SHOULD refresh any
+timeouts on the RStream while associated ExStreams are open.</t>
+<t>A sender <bcp14>MUST NOT</bcp14> initiate new ExStreams if on an RStream that is in the
+open or half closed (remote) state.</t>
+<t>Endpoints process new ExStreams only when the RStream is open or half closed
+(local) state. If an endpoint receives an EX<em>HEADERS frame specifying an RStream
+in the closed or haf closed (remote) state, it <bcp14>MUST</bcp14> respond with a connection
+error of type ROUTING</em>STREAM_ERROR.</t>
+</section>
+
+<section anchor="negotiate-the-extension-through-settings-frame"><name>Negotiate the Extension through SETTINGS frame</name>
+<t>The extension SHOULD be disabled by default. Endpoints can negotiate the use of
+the extension through the SETTINGS frame. If an implementation supports the
+extension, it is RECOMMENDED to include the ENABLE<em>EX</em>HEADERS setting in the
+initial SETTINGS frame. HTTP/2 compliant implementations will ignore the setting
+if it is unknown. An endpoint can send EX<em>HEADERS frames immediately upon
+receiving a SETTINGS frame with ENABLE</em>EX_HEADERS=1.</t>
+<t>Endpoints <bcp14>MUST NOT</bcp14> send out EX<em>HEADERS before receiving a SETTINGS frame with
+the ENABLE</em>EX<em>HEADERS=1. If a remote endpoint does not support this extension,
+the EX</em>HEADERS will be ignored, making the header compression contexts
+inconsistent between sender and receiver.</t>
+<t>If an endpoint supports this extension, but receives EX<em>HEADERS before
+ENABLE</em>EX<em>HEADERS, it <bcp14>MUST</bcp14> respond with a connection error
+EX</em>HEADER<em>NOT</em>ENABLED_ERROR.</t>
+<t>Intermediaries SHOULD send the ENABLE<em>EX</em>HEADERS setting to clients, only if
+intermediaries and their upstream servers can support this extension. If an
+intermediary receives an ExStream but discovers the destination endpoint does
+not support the extension, it <bcp14>MUST</bcp14> reset the stream with
+EX<em>HEADER</em>NOT<em>ENABLED</em>ERROR.</t>
+</section>
+
+<section anchor="interaction-with-standard-http2-features"><name>Interaction with standard http2 features</name>
+<t>The extension implementation should apply stream and connection level flow
+control, maximum concurrent streams limit, GOAWAY logic to both RStreams and
+ExStreams.</t>
+</section>
+</section>
+
+<section anchor="http2-ex-headers-frame"><name>HTTP2 EX_HEADERS Frame</name>
+<t>The EX<em>HEADERS frame (type=0xfb) has all the fields and frame header flags
+defined by HEADERS frame in HEADERS <xref target="RFC7540"></xref>. Moreover, EX</em>HEADERS has one
+extra field, RStream ID. It is used to open an ExStream, and additionally
+carries a header block fragment. EX_HEADERS frames can be sent on a stream in
+the &quot;idle&quot;, &quot;open&quot;, or &quot;half-closed (remote)&quot; state.</t>
+<t>Like HEADERS, the CONTINUATION frame (type=0x9) is used to continue a sequence
+of header block fragments, if the headers do not fit into one EX_HEADERS frame.</t>
+<figure anchor="fig-ex-headers-frame"><name>EX_HEADERS Frame Payload
+</name>
+<artwork> +---------------+
+ |Pad Length? (8)|
+ +-+-------------+-----------------------------------------------+
+ |E|                 Stream Dependency? (31)                     |
+ +-+-------------+-----------------------------------------------+
+ |  Weight? (8)  |
+ +-+-------------+-----------------------------------------------+
+ |R|                 Routing Stream ID (31)                      |
+ +-+-------------+-----------------------------------------------+
+ |                   Header Block Fragment (*)                 ...
+ +---------------------------------------------------------------+
+ |                           Padding (*)                       ...
+ +---------------------------------------------------------------+
+</artwork>
+</figure>
+<t>The RStream specified in EX<em>HEADERS frames <bcp14>MUST</bcp14> be an open stream. The recipient
+<bcp14>MUST</bcp14> respond with a connection error ROUTING</em>STREAM<em>ERROR PROTOCOL</em>ERROR, if the
+specified RStream is missing; or is an ExStream rather than a stream; or is
+closed or half-closed (remote). Otherwise, the states maintained for header
+compression or flow control) may be out of sync.</t>
+</section>
+
+<section anchor="iana-considerations"><name>IANA Considerations</name>
+<t>This document establishes a registry for a new frame type, setting, and error
+code.</t>
+
+<section anchor="frame-type-registry"><name>FRAME TYPE Registry</name>
+<t>The entry in the following table are registered by this document.</t>
+
+<artwork>   +---------------+------+--------------+
+   | Frame Type    | Code | Section      |
+   +---------------+------+--------------+
+   | EX_HEADERS    | 0xfb |              |
+   +---------------+------+--------------+
+</artwork>
+</section>
+
+<section anchor="settings-registry"><name>Settings Registry</name>
+<t>The entry in the following table are registered by this document.</t>
+
+<artwork>+------------------------+--------+---------------+---------------+
+| Name                   | Code   | Initial Value | Specification |
++------------------------+--------+---------------+---------------+
+| ENABLE_EX_HEADERS      | 0xfbfb | 0             |               |
++------------------------+--------+---------------+---------------+
+</artwork>
+</section>
+
+<section anchor="error-code-registry"><name>Error Code Registry</name>
+<t>The entry in the following table are registered by this document.</t>
+
+<artwork>+----------------------+------+-------------------+---------------+
+| Name                 | Code | Description       | Specification |
++----------------------+------+-------------------+---------------+
+| ROUTING_STREAM_ERROR | 0xfb | Routing stream is |               |
+|                      |      | not open          |               |
+| EX_HEADERS_NOT_      | 0xfc | EX_HEADERS is not |               |
+| ENABLED_ERROR        |      | enabled yet       |               |
++----------------------+------+-------------------+---------------+
+</artwork>
+</section>
+</section>
+
+</middle>
+
+<back>
+<references><name>Normative References</name>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.7540.xml"/>
+</references>
+
+</back>
+
+</rfc>
