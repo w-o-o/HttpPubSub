@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- name="GENERATOR" content="github.com/mmarkdown/mmark Mmark Markdown Processor - mmark.nl" -->
-<rfc version="3" ipr="trust200902" submissionType="IETF" category="std" xml:lang="en" consensus="true" xmlns:xi="http://www.w3.org/2001/XInclude"  docName="draft-xie-bidirectional-messaging-01">
+<rfc version="3" ipr="trust200902" submissionType="IETF" category="std" xml:lang="en" consensus="true" xmlns:xi="http://www.w3.org/2001/XInclude" docName="draft-xie-bidirectional-messaging-02">
 
 <front>
 <title abbrev="bidirectional messaging">An HTTP/2 extension for bidirectional messaging communication</title><seriesInfo value="draft-xie-bidirectional-messaging-00" stream="IETF" status="standard" name="Internet-Draft"></seriesInfo>
