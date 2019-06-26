@@ -5,11 +5,10 @@
 httpbis Working Group                                             G. Xie
 Internet-Draft                                               A. Frindell
 Intended status: Standards Track                           Facebook Inc.
-Expires: 8 December 2019                                     6 June 2019
+Expires: 28 December 2019                                   26 June 2019
 
 
      An HTTP/2 extension for bidirectional messaging communication
-                  draft-xie-bidirectional-messaging-01
 
 Abstract
 
@@ -31,7 +30,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 December 2019.
+   This Internet-Draft will expire on 28 December 2019.
 
 Copyright Notice
 
@@ -53,7 +52,8 @@ Copyright Notice
 
 
 
-Xie & Frindell           Expires 8 December 2019                [Page 1]
+
+Xie & Frindell          Expires 28 December 2019                [Page 1]
 
 Internet-Draft           bidirectional messaging               June 2019
 
@@ -67,11 +67,11 @@ Table of Contents
        3.2.  Bidirectional Messaging Communication . . . . . . . . .   3
        3.3.  States of RStream and ExStream  . . . . . . . . . . . .   4
        3.4.  Negotiate the Extension through SETTINGS frame  . . . .   5
-       3.5.  Interaction with standard http2 features  . . . . . . .   5
-   4.  HTTP2 EX_HEADERS Frame  . . . . . . . . . . . . . . . . . . .   5
+       3.5.  Interaction with standard HTTP/2 features . . . . . . .   5
+   4.  HTTP/2 EX_HEADERS Frame . . . . . . . . . . . . . . . . . . .   6
    5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   6
        5.1.  FRAME TYPE Registry . . . . . . . . . . . . . . . . . .   6
-       5.2.  Settings Registry . . . . . . . . . . . . . . . . . . .   6
+       5.2.  Settings Registry . . . . . . . . . . . . . . . . . . .   7
        5.3.  Error Code Registry . . . . . . . . . . . . . . . . . .   7
    6.  Normative References  . . . . . . . . . . . . . . . . . . . .   7
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .   7
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Xie & Frindell           Expires 8 December 2019                [Page 2]
+Xie & Frindell          Expires 28 December 2019                [Page 2]
 
 Internet-Draft           bidirectional messaging               June 2019
 
@@ -165,7 +165,7 @@ Internet-Draft           bidirectional messaging               June 2019
 
 
 
-Xie & Frindell           Expires 8 December 2019                [Page 3]
+Xie & Frindell          Expires 28 December 2019                [Page 3]
 
 Internet-Draft           bidirectional messaging               June 2019
 
@@ -173,16 +173,20 @@ Internet-Draft           bidirectional messaging               June 2019
         Figure 2: Server initiates the ExStream to client, after an
                               RStream is open.
 
-   Beyond that, clients can multiplex RStreams, ExStreams and regular
-   HTTP/2 streams into one HTTP/2 connection.  This enables clients to
-   access different services without initiating new TCP connections.
-   This avoids the latency cost of setting up new connections.  This is
-   more desirable for mobile devices because they usually have longer
-   RTT and battery constraints.  Multiplexing these services also allows
-   them to share a single TCP connection congestion control context.
+   Beyond that, a client can multiplex RStreams, ExStreams and regular
+   HTTP/2 streams into one single HTTP/2 connection.  This enables
+   clients to access different services without initiating new transport
+   layer connections.  This saves the latency of setting up new
+   connections.  This is more desirable for mobile devices because they
+   usually have longer latency network connectivity and tighten battery
+   constraints.  Multiplexing these services also allows them to share a
+   single transport connection congestion control context.  It could
+   open new optimization opportunities, like prioritizing interactive
+   streams over static content fetching streams.
 
    As shown in the following diagram, the client can exchange data with
-   PubSub, RPC and CDN three different services with one TCP connection.
+   PubSub, RPC and CDN three different services within one HTTP/2
+   connection.
 
    +--------+   RStream (5)   +---------+    RStream (1)   +----------+
    | client |>--------------->|  proxy  |>---------------->|  PUBSUB  |
@@ -203,47 +207,57 @@ Internet-Draft           bidirectional messaging               June 2019
 
    RStreams are regular HTTP/2 streams that follow the stream lifecycle
    in [RFC7540], section 5.1.  ExStreams use the same lifecycle as
-   regular HTTP/2 streams, but also depend on their RStreams.  If a
-   RStream is reset, endpoints MUST reset the ExStreams associated with
-   that RStream.  If the RStream is closed, endpoints SHOULD allow
-   existing ExStreams complete normally.  The RStream SHOULD remain open
-   while communication is ongoing.  Endpoints SHOULD refresh any
-   timeouts on the RStream while associated ExStreams are open.
+   regular HTTP/2 streams, but have extra dependence on their RStreams.
+   If a RStream is reset, endpoints MUST reset the ExStreams associated
+   with that RStream.  If the RStream is closed, endpoints SHOULD allow
+   the existing ExStreams to complete normally.  The RStream SHOULD
+   remain open while communication is ongoing.  Endpoints SHOULD refresh
+   any timeout on the RStream while its associated ExStreams are open.
 
    A sender MUST NOT initiate new ExStreams if on an RStream that is in
    the open or half closed (remote) state.
+
+
+
+
+
+Xie & Frindell          Expires 28 December 2019                [Page 4]
+
+Internet-Draft           bidirectional messaging               June 2019
+
 
    Endpoints process new ExStreams only when the RStream is open or half
    closed (local) state.  If an endpoint receives an EX_HEADERS frame
    specifying an RStream in the closed or haf closed (remote) state, it
    MUST respond with a connection error of type ROUTING_STREAM_ERROR.
 
-
-
-
-Xie & Frindell           Expires 8 December 2019                [Page 4]
-
-Internet-Draft           bidirectional messaging               June 2019
-
-
 3.4.  Negotiate the Extension through SETTINGS frame
 
-   The extension SHOULD be disabled by default.  Endpoints can negotiate
-   the use of the extension through the SETTINGS frame.  If an
-   implementation supports the extension, it is RECOMMENDED to include
-   the ENABLE_EX_HEADERS setting in the initial SETTINGS frame.  HTTP/2
-   compliant implementations will ignore the setting if it is unknown.
+   The extension SHOULD be disabled by default.  As suggested in
+   [RFC7540], section 5.5, the unknown ENABLE_EX_HEADERS setting and
+   EX_HEADERS frame MUST be ignored by HTTP/2 compliant implementations,
+   which have supported this extension yet.
+
+   Endpoints can negotiate the use of the extension through the SETTINGS
+   frame.  If an implementation supports the extension, it is
+   RECOMMENDED to include the ENABLE_EX_HEADERS setting in the initial
+   SETTINGS frame, such that the remote endpoint can disover the support
+   at the earliest time.  Once enabled, this extension MUST NOT be
+   disabled over the lifetime of the connection.
+
    An endpoint can send EX_HEADERS frames immediately upon receiving a
    SETTINGS frame with ENABLE_EX_HEADERS=1.
 
-   Endpoints MUST NOT send out EX_HEADERS before receiving a SETTINGS
+   An endpoint MUST NOT send out EX_HEADERS before receiving a SETTINGS
    frame with the ENABLE_EX_HEADERS=1.  If a remote endpoint does not
-   support this extension, the EX_HEADERS will be ignored, making the
-   header compression contexts inconsistent between sender and receiver.
+   support this extension yet, the EX_HEADERS will be ignored, making
+   the header compression contexts inconsistent between sender and
+   receiver.
 
    If an endpoint supports this extension, but receives EX_HEADERS
-   before ENABLE_EX_HEADERS, it MUST respond with a connection error
-   EX_HEADER_NOT_ENABLED_ERROR.
+   frames before ENABLE_EX_HEADERS, it is RECOMMENDED to respond with a
+   connection error EX_HEADER_NOT_ENABLED_ERROR.  This helps the remote
+   endpoint to implement this extension properly.
 
    Intermediaries SHOULD send the ENABLE_EX_HEADERS setting to clients,
    only if intermediaries and their upstream servers can support this
@@ -251,36 +265,35 @@ Internet-Draft           bidirectional messaging               June 2019
    destination endpoint does not support the extension, it MUST reset
    the stream with EX_HEADER_NOT_ENABLED_ERROR.
 
-3.5.  Interaction with standard http2 features
+3.5.  Interaction with standard HTTP/2 features
 
-   The extension implementation should apply stream and connection level
+   The extension implementation SHOULD apply stream and connection level
    flow control, maximum concurrent streams limit, GOAWAY logic to both
    RStreams and ExStreams.
 
-4.  HTTP2 EX_HEADERS Frame
+
+
+
+
+
+
+Xie & Frindell          Expires 28 December 2019                [Page 5]
+
+Internet-Draft           bidirectional messaging               June 2019
+
+
+4.  HTTP/2 EX_HEADERS Frame
 
    The EX_HEADERS frame (type=0xfb) has all the fields and frame header
-   flags defined by HEADERS frame in HEADERS [RFC7540].  Moreover,
-   EX_HEADERS has one extra field, RStream ID.  It is used to open an
-   ExStream, and additionally carries a header block fragment.
-   EX_HEADERS frames can be sent on a stream in the "idle", "open", or
-   "half-closed (remote)" state.
+   flags defined by HEADERS frame in HEADERS [RFC7540], section 6.2.
+   Moreover, a EX_HEADERS frame has one extra field, Routing Stream ID.
+   It is used to open an ExStream, and additionally carries a header
+   block fragment.  EX_HEADERS frames can be sent on a stream in the
+   "idle", "open", or "half-closed (remote)" state.
 
    Like HEADERS, the CONTINUATION frame (type=0x9) is used to continue a
    sequence of header block fragments, if the headers do not fit into
    one EX_HEADERS frame.
-
-
-
-
-
-
-
-
-Xie & Frindell           Expires 8 December 2019                [Page 5]
-
-Internet-Draft           bidirectional messaging               June 2019
-
 
     +---------------+
     |Pad Length? (8)|
@@ -298,12 +311,12 @@ Internet-Draft           bidirectional messaging               June 2019
 
                      Figure 4: EX_HEADERS Frame Payload
 
-   The RStream specified in EX_HEADERS frames MUST be an open stream.
-   The recipient MUST respond with a connection error
+   The RStream specified in a EX_HEADERS frame MUST be an open stream.
+   The recipient MUST respond with a connection error of type
    ROUTING_STREAM_ERROR PROTOCOL_ERROR, if the specified RStream is
-   missing; or is an ExStream rather than a stream; or is closed or
-   half-closed (remote).  Otherwise, the states maintained for header
-   compression or flow control) may be out of sync.
+   missing; or is an ExStream rather than a regualr HTTP/2 stream; or is
+   closed or half-closed (remote).  Otherwise, the states maintained for
+   header compression or flow control) may be out of sync.
 
 5.  IANA Considerations
 
@@ -313,6 +326,17 @@ Internet-Draft           bidirectional messaging               June 2019
 5.1.  FRAME TYPE Registry
 
    The entry in the following table are registered by this document.
+
+
+
+
+
+
+
+Xie & Frindell          Expires 28 December 2019                [Page 6]
+
+Internet-Draft           bidirectional messaging               June 2019
+
 
       +---------------+------+--------------+
       | Frame Type    | Code | Section      |
@@ -329,14 +353,6 @@ Internet-Draft           bidirectional messaging               June 2019
    +------------------------+--------+---------------+---------------+
    | ENABLE_EX_HEADERS      | 0xfbfb | 0             |               |
    +------------------------+--------+---------------+---------------+
-
-
-
-
-Xie & Frindell           Expires 8 December 2019                [Page 6]
-
-Internet-Draft           bidirectional messaging               June 2019
-
 
 5.3.  Error Code Registry
 
@@ -370,6 +386,14 @@ Authors' Addresses
    1 Hacker Way
    Menlo Park
 
+
+
+
+Xie & Frindell          Expires 28 December 2019                [Page 7]
+
+Internet-Draft           bidirectional messaging               June 2019
+
+
    Email: woo@fb.com
 
 
@@ -389,4 +413,36 @@ Authors' Addresses
 
 
 
-Xie & Frindell           Expires 8 December 2019                [Page 7]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Xie & Frindell          Expires 28 December 2019                [Page 8]

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- name="GENERATOR" content="github.com/mmarkdown/mmark Mmark Markdown Processor - mmark.nl" -->
-<rfc version="3" ipr="trust200902" submissionType="IETF" category="std" xml:lang="en" consensus="true" xmlns:xi="http://www.w3.org/2001/XInclude" docName="draft-xie-bidirectional-messaging-02">
+<rfc version="3" ipr="trust200902" submissionType="IETF" category="std" xml:lang="en" consensus="true" xmlns:xi="http://www.w3.org/2001/XInclude">
 
 <front>
 <title abbrev="bidirectional messaging">An HTTP/2 extension for bidirectional messaging communication</title><seriesInfo value="draft-xie-bidirectional-messaging-00" stream="IETF" status="standard" name="Internet-Draft"></seriesInfo>
@@ -96,15 +96,17 @@ client to server, either endpoint can initiate an ExStreams to its peer.</t>
      +------------------------+     +------------------------+
 </artwork>
 </figure>
-<t>Beyond that, clients can multiplex RStreams, ExStreams and regular HTTP/2
-streams into one HTTP/2 connection. This enables clients to access different
-services without initiating new TCP connections. This avoids the latency cost of
-setting up new connections. This is more desirable for mobile devices because
-they usually have longer RTT and battery constraints. Multiplexing these
-services also allows them to share a single TCP connection congestion control
-context.</t>
-<t>As shown in the following diagram, the client can exchange data with PubSub, RPC
-and CDN three different services with one TCP connection.</t>
+<t>Beyond that, a client can multiplex RStreams, ExStreams and regular HTTP/2
+streams into one single HTTP/2 connection. This enables clients to access
+different services without initiating new transport layer connections. This
+saves the latency of setting up new connections. This is more desirable for
+mobile devices because they usually have longer latency network connectivity
+and tighten battery constraints. Multiplexing these services also allows them
+to share a single transport connection congestion control context. It could
+open new optimization opportunities, like prioritizing interactive streams
+over static content fetching streams.</t>
+<t>As shown in the following diagram, the client can exchange data with PubSub,
+RPC and CDN three different services within one HTTP/2 connection.</t>
 <figure anchor="fig-multiplex"><name>Client opens multiple RStreams and a HTTP/2 stream within one HTTP/2
 connection.
 </name>
@@ -126,11 +128,11 @@ connection.
 <section anchor="states-of-rstream-and-exstream"><name>States of RStream and ExStream</name>
 <t>RStreams are regular HTTP/2 streams that follow the stream lifecycle in
 <xref target="RFC7540"></xref>, section 5.1. ExStreams use the same lifecycle as regular HTTP/2
-streams, but also depend on their RStreams. If a RStream is reset, endpoints
+streams, but have extra dependence on their RStreams. If a RStream is reset, endpoints
 <bcp14>MUST</bcp14> reset the ExStreams associated with that RStream. If the RStream is
-closed, endpoints SHOULD allow existing ExStreams complete normally. The RStream
-SHOULD remain open while communication is ongoing. Endpoints SHOULD refresh any
-timeouts on the RStream while associated ExStreams are open.</t>
+closed, endpoints <bcp14>SHOULD</bcp14> allow the existing ExStreams to complete normally. The RStream
+<bcp14>SHOULD</bcp14> remain open while communication is ongoing. Endpoints <bcp14>SHOULD</bcp14> refresh any
+timeout on the RStream while its associated ExStreams are open.</t>
 <t>A sender <bcp14>MUST NOT</bcp14> initiate new ExStreams if on an RStream that is in the
 open or half closed (remote) state.</t>
 <t>Endpoints process new ExStreams only when the RStream is open or half closed
@@ -140,39 +142,46 @@ error of type ROUTING</em>STREAM_ERROR.</t>
 </section>
 
 <section anchor="negotiate-the-extension-through-settings-frame"><name>Negotiate the Extension through SETTINGS frame</name>
-<t>The extension SHOULD be disabled by default. Endpoints can negotiate the use of
-the extension through the SETTINGS frame. If an implementation supports the
-extension, it is RECOMMENDED to include the ENABLE<em>EX</em>HEADERS setting in the
-initial SETTINGS frame. HTTP/2 compliant implementations will ignore the setting
-if it is unknown. An endpoint can send EX<em>HEADERS frames immediately upon
-receiving a SETTINGS frame with ENABLE</em>EX_HEADERS=1.</t>
-<t>Endpoints <bcp14>MUST NOT</bcp14> send out EX<em>HEADERS before receiving a SETTINGS frame with
-the ENABLE</em>EX<em>HEADERS=1. If a remote endpoint does not support this extension,
-the EX</em>HEADERS will be ignored, making the header compression contexts
-inconsistent between sender and receiver.</t>
-<t>If an endpoint supports this extension, but receives EX<em>HEADERS before
-ENABLE</em>EX<em>HEADERS, it <bcp14>MUST</bcp14> respond with a connection error
-EX</em>HEADER<em>NOT</em>ENABLED_ERROR.</t>
-<t>Intermediaries SHOULD send the ENABLE<em>EX</em>HEADERS setting to clients, only if
+<t>The extension <bcp14>SHOULD</bcp14> be disabled by default. As suggested in <xref target="RFC7540"></xref>,
+section 5.5, the unknown ENABLE<em>EX</em>HEADERS setting and EX_HEADERS frame
+<bcp14>MUST</bcp14> be ignored by HTTP/2 compliant implementations, which have supported
+this extension yet.</t>
+<t>Endpoints can negotiate the use of the extension through the SETTINGS frame.
+If an implementation supports the extension, it is <bcp14>RECOMMENDED</bcp14> to include
+the ENABLE<em>EX</em>HEADERS setting in the initial SETTINGS frame, such that the
+remote endpoint can disover the support at the earliest time. Once enabled,
+this extension <bcp14>MUST NOT</bcp14> be disabled over the lifetime of the connection.</t>
+<t>An endpoint can send EX<em>HEADERS frames immediately upon receiving a SETTINGS
+frame with ENABLE</em>EX_HEADERS=1.</t>
+<t>An endpoint <bcp14>MUST NOT</bcp14> send out EX<em>HEADERS before receiving a SETTINGS frame
+with the ENABLE</em>EX<em>HEADERS=1. If a remote endpoint does not support this
+extension yet, the EX</em>HEADERS will be ignored, making the header compression
+contexts inconsistent between sender and receiver.</t>
+<t>If an endpoint supports this extension, but receives EX<em>HEADERS frames before
+ENABLE</em>EX<em>HEADERS, it is <bcp14>RECOMMENDED</bcp14> to respond with a connection error
+EX</em>HEADER<em>NOT</em>ENABLED_ERROR. This helps the remote endpoint to implement this
+extension properly.</t>
+<t>Intermediaries <bcp14>SHOULD</bcp14> send the ENABLE<em>EX</em>HEADERS setting to clients, only if
 intermediaries and their upstream servers can support this extension. If an
 intermediary receives an ExStream but discovers the destination endpoint does
 not support the extension, it <bcp14>MUST</bcp14> reset the stream with
 EX<em>HEADER</em>NOT<em>ENABLED</em>ERROR.</t>
 </section>
 
-<section anchor="interaction-with-standard-http2-features"><name>Interaction with standard http2 features</name>
-<t>The extension implementation should apply stream and connection level flow
+<section anchor="interaction-with-standard-http-2-features"><name>Interaction with standard HTTP/2 features</name>
+<t>The extension implementation <bcp14>SHOULD</bcp14> apply stream and connection level flow
 control, maximum concurrent streams limit, GOAWAY logic to both RStreams and
 ExStreams.</t>
 </section>
 </section>
 
-<section anchor="http2-ex-headers-frame"><name>HTTP2 EX_HEADERS Frame</name>
+<section anchor="http-2-ex-headers-frame"><name>HTTP/2 EX_HEADERS Frame</name>
 <t>The EX<em>HEADERS frame (type=0xfb) has all the fields and frame header flags
-defined by HEADERS frame in HEADERS <xref target="RFC7540"></xref>. Moreover, EX</em>HEADERS has one
-extra field, RStream ID. It is used to open an ExStream, and additionally
-carries a header block fragment. EX_HEADERS frames can be sent on a stream in
-the &quot;idle&quot;, &quot;open&quot;, or &quot;half-closed (remote)&quot; state.</t>
+defined by HEADERS frame in HEADERS <xref target="RFC7540"></xref>, section 6.2. Moreover,
+a EX</em>HEADERS frame has one extra field, Routing Stream ID. It is used to
+open an ExStream, and additionally carries a header block fragment. EX_HEADERS
+frames can be sent on a stream in the &quot;idle&quot;, &quot;open&quot;, or &quot;half-closed (remote)&quot;
+state.</t>
 <t>Like HEADERS, the CONTINUATION frame (type=0x9) is used to continue a sequence
 of header block fragments, if the headers do not fit into one EX_HEADERS frame.</t>
 <figure anchor="fig-ex-headers-frame"><name>EX_HEADERS Frame Payload
@@ -192,9 +201,9 @@ of header block fragments, if the headers do not fit into one EX_HEADERS frame.<
  +---------------------------------------------------------------+
 </artwork>
 </figure>
-<t>The RStream specified in EX<em>HEADERS frames <bcp14>MUST</bcp14> be an open stream. The recipient
-<bcp14>MUST</bcp14> respond with a connection error ROUTING</em>STREAM<em>ERROR PROTOCOL</em>ERROR, if the
-specified RStream is missing; or is an ExStream rather than a stream; or is
+<t>The RStream specified in a EX<em>HEADERS frame <bcp14>MUST</bcp14> be an open stream. The recipient
+<bcp14>MUST</bcp14> respond with a connection error of type ROUTING</em>STREAM<em>ERROR PROTOCOL</em>ERROR, if the
+specified RStream is missing; or is an ExStream rather than a regualr HTTP/2 stream; or is
 closed or half-closed (remote). Otherwise, the states maintained for header
 compression or flow control) may be out of sync.</t>
 </section>
