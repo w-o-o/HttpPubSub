@@ -47,20 +47,52 @@ messaging communication between client and server.
 # Introduction
 
 HTTP/2 is the de facto application protocol in Internet. The optimizations
-developed in HTTP/2, like stream multiplexing, header compression, and binary
-message framing are very generic. They can be useful in non web browsing
-applications, for example, Publish/Subscribe, RPC. However, the request/response
-from client to server communication pattern limits HTTP/2 from wider use in
-these applications. This draft proposes an HTTP/2 protocol extension, which
-enables bidirectional messaging between client and server.
+developed in HTTP/2, like stream multiplexing, header compression, efficient
+binary message framing, and graceful shutdown of open streams, are very generic.
+They can be useful in non web browsing applications, for example,
+Publish/Subscribe, RPC. However, the unidirectional from client to server
+communication pattern limits HTTP/2 from wider use in these applications. This
+draft proposes an HTTP/2 protocol extension, which enables bidirectional
+communication between client and server.
 
-The only mechanism HTTP/2 provides for server to client communication is
-PUSH_PROMISE. While this satisfies some use-cases, it is unidirectional, i.g.
-the client cannot respond. In this draft, a new frame is introduced which has
-the routing properties of PUSH_PROMISE and the bi-directionality of HEADERS.
-Further, clients are also able group streams together for routing purposes, such
-that each individual stream does not need to carry additional routing
-information.
+So far, the only mechanism HTTP/2 provides for server to client communication is
+server push. That is, servers can initiate unidirectional push promised streams
+to clients, but clients cannot respond to them, except accept or discard them
+silently. While this satisfies some use-cases, its unidirectional property
+limits HTTP/2 for wider use, for example, send messages and notifications from
+servers to clients at the time they are available. 
+
+To work around this limitation, many techniques are developed, like long polling
+[@!RFC6202], WebSocket [@!RFC8441], and tunneling. They are common at: layering
+application protocol on top of HTTP/2 and using HTTP/2 streams as transport
+connections. These solutions more or less defeat the optimizations provided by
+HTTP/2. For example, first, if multiplexing multiple parallel interactions into
+one HTTP/2 stream, the head of line block will be re-introduced. Second,
+application meta data is encapsulated into DATA frame, rather than HEADERS
+frame, so header compression is impossible. Third, user data are framed more
+than once at different protocol layers, which offsets the wire efficiency from
+HTTP/2 binary frame. Take WebSocket over HTTP/2 as an example, user data is
+framed at application protocol, WebSocket, and HTTP/2 layers. This not only
+introduces the byte overhead on the wire, but also complicates the data
+processing. These techniques also pose new operational challenges to
+intermediaries. Due to the traffic from the whole user session is encapsulated
+into one HTTP/2 stream, this stream can last very long time. Intermediaries may
+take long time to drain these streams. As a remind, GOAWAY can only signals the
+remote endpoint to stop using the connection for new streams and does not help
+the open streams. Moreover, intermediaries have no visibility to user
+interactions, and lose the capability to collect telemetry metrics (e.g., time
+to the first/last byte of request and response) for services.
+
+In this draft, a new HTTP/2 frame is introduced which has the routing properties
+of PUSH_PROMISE frame and the bi-directionality of HEADERS frame. The extension
+provides several benefits: 1) after a HTTP/2 connection setup, a server can
+initiate streams to the client anytime, and the client can respond to the
+incoming streams accordingly. That is, the communication over HTTP/2 is
+bidirectional and symmetric. 2) All the HTTP/2 optimizations still apply.
+Intermediaries also have all the necessary meta data to accomplish their goals.
+3) Further, clients are able to group streams together for routing purposes,
+such that each individual stream group can be used for a different service,
+within the same HTTP/2 connections.
 
 # Conventions and Terminology
 
