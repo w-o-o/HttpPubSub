@@ -1,48 +1,40 @@
-%%%
-title = "An HTTP/2 extension for bidirectional messaging communication"
-abbrev = "bidirectional messaging"
-ipr= "trust200902"
-area = "Internet"
-workgroup = "httpbis Working Group"
-submissiontype = "IETF"
-keyword = ["Internet-Draft"]
-#date = 2019-03-01T00:00:00Z
+---
+title: An HTTP/2 Extension for bidirectional message communication
+docname: draft-xie-bidirectional-messaging-latest
+abbrev: HTTP-PUBSUB
+ipr: trust200902
+area: Internet
+workgroup: httpbis Working Group
+submissiontype: IETF
+keyword: Internet-Draft
+#date: 2019-03-01T00:00:00Z
 
-[seriesInfo]
-name = "Internet-Draft"
-value = "draft-xie-bidirectional-messaging-00"
-stream = "IETF"
-status = "standard"
+seriesInfo:
+ -
+    name: Internet-Draft
+    value: draft-xie-bidirectional-messaging-00
+    stream: IETF
+    status: standard
 
-[[author]]
-initials = "G."
-surname = "Xie"
-fullname = "Guowu Xie"
-#role = "editor"
-organization = "Facebook Inc."
-  [author.address]
-  email = "woo@fb.com"
-  [author.address.postal]
-  street = "1 Hacker Way"
-  city = "Menlo Park"
-  country = "U.S.A."
-  code = "CA 94025"
-  
-[[author]]
-initials = "A."
-surname = "Frindell"
-fullname = "Alan Frindell"
-#role = "editor"
-organization = "Facebook Inc."
-  [author.address]
-  email = "afrind@fb.com"
-%%%
+author:
+ -
+    ins: "G. Xie"
+    name: "Guowu Xie"
+    organization: "Facebook Inc."
+    email: woo@fb.com
+ -
+    ins: "A. Frindell"
+    name: "Alan Frindell"
+    organization: "Facebook Inc."
+    email: afrind@fb.com
+
+--- abstract
 
 .# Abstract
 This draft proposes an http2 protocol extension, which enables bidirectional
 messaging communication between client and server.
 
-{mainmatter}
+--- middle
 
 # Introduction
 
@@ -60,20 +52,20 @@ server push. That is, servers can initiate unidirectional push promised streams
 to clients, but clients cannot respond to them, except accept or discard them
 silently. While this satisfies some use-cases, its unidirectional property
 limits HTTP/2 for wider use, for example, send messages and notifications from
-servers to clients at the time they are available. 
+servers to clients at the time they are available.
 
 To work around this limitation, many techniques are developed, like long polling
-[@!RFC6202], WebSocket [@!RFC8441], and tunneling. They are common at: layering
-application protocol on top of HTTP/2 and using HTTP/2 streams as transport
-connections. These solutions more or less defeat the optimizations provided by
-HTTP/2. For example, first, if multiplexing multiple parallel interactions into
-one HTTP/2 stream, the head of line block will be re-introduced. Second,
-application meta data is encapsulated into DATA frame, rather than HEADERS
-frame, so header compression is impossible. Third, user data are framed more
-than once at different protocol layers, which offsets the wire efficiency from
-HTTP/2 binary frame. Take WebSocket over HTTP/2 as an example, user data is
-framed at application protocol, WebSocket, and HTTP/2 layers. This not only
-introduces the byte overhead on the wire, but also complicates the data
+{{!RFC6202}}, WebSocket {{!RFC8441}}, and tunneling. They are common at:
+layering application protocol on top of HTTP/2 and using HTTP/2 streams as
+transport connections. These solutions more or less defeat the optimizations
+provided by HTTP/2. For example, first, if multiplexing multiple parallel
+interactions into one HTTP/2 stream, the head of line block will be
+re-introduced. Second, application meta data is encapsulated into DATA frame,
+rather than HEADERS frame, so header compression is impossible. Third, user data
+are framed more than once at different protocol layers, which offsets the wire
+efficiency from HTTP/2 binary frame. Take WebSocket over HTTP/2 as an example,
+user data is framed at application protocol, WebSocket, and HTTP/2 layers. This
+not only introduces the byte overhead on the wire, but also complicates the data
 processing. These techniques also pose new operational challenges to
 intermediaries. Due to the traffic from the whole user session is encapsulated
 into one HTTP/2 stream, this stream can last very long time. Intermediaries may
@@ -99,9 +91,9 @@ within the same HTTP/2 connections.
 The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**,
 **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **MAY**, and **OPTIONAL**, when
 they appear in this document, are to be interpreted as described in
-[@!RFC2119].
+{{!RFC2119}}.
 
-All the terms defined in the Conventions and Terminology section in [@!RFC7540]
+All the terms defined in the Conventions and Terminology section in {{!RFC7540}}
 apply to this document.
 
 # Solution Overview
@@ -175,7 +167,7 @@ and CDN three different services within one HTTP/2 connection.
   |   |     RStream (7)    /  |  |   \    RStream (5)   +----------+
   |   +-------------------+   |  |    +---------------->|    RPC   |
   |                           |  |                      +----------+
-  |                           |  |  
+  |                           |  |
   |         Stream (9)        |  |      Stream (7)      +----------+
   +---------------------------+  +--------------------->|    CDN   |
                                                         +----------+
@@ -186,7 +178,7 @@ connection.
 ## States of RStream and XStream
 
 RStreams are regular HTTP/2 streams that follow the stream lifecycle in
-[@!RFC7540], section 5.1. XStreams use the same lifecycle as regular HTTP/2
+{{!RFC7540}}, section 5.1. XStreams use the same lifecycle as regular HTTP/2
 streams, but have extra dependence on their RStreams. If an RStream is reset,
 endpoints **MUST** reset the XStreams associated with that RStream. If the
 RStream is closed, endpoints **SHOULD** allow the existing XStreams to complete
@@ -204,7 +196,7 @@ connection error of type ROUTING_STREAM_ERROR.
 
 ## Negotiate the Extension through SETTINGS frame
 
-The extension **SHOULD** be disabled by default. As suggested in [@!RFC7540],
+The extension **SHOULD** be disabled by default. As suggested in {{!RFC7540}},
 section 5.5, the unknown ENABLE_XHEADERS setting and XHEADERS frame **MUST** be
 ignored by HTTP/2 compliant implementations, which have supported this extension
 yet.
@@ -244,7 +236,7 @@ XStreams.
 # HTTP/2 XHEADERS Frame
 
 The XHEADERS frame (type=0xfb) has all the fields and frame header flags defined
-by HEADERS frame in HEADERS [@!RFC7540], section 6.2. Moreover, an XHEADERS
+by HEADERS frame in HEADERS {{!RFC7540}}, section 6.2. Moreover, an XHEADERS
 frame has one extra field, Routing Stream ID. It is used to open an XStream, and
 additionally carries a header block fragment. XHEADERS frames can be sent on a
 stream in the "idle", "open", or "half-closed (remote)" state.
@@ -318,4 +310,4 @@ The entry in the following table are registered by this document.
 +----------------------+------+-------------------+---------------+
 ~~~
 
-{backmatter}
+--- back
