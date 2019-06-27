@@ -10,7 +10,7 @@ keyword = ["Internet-Draft"]
 
 [seriesInfo]
 name = "Internet-Draft"
-value = "draft-xie-bidirectional-messaging-00"
+value = "draft-xie-bidirectional-messaging-latest"
 stream = "IETF"
 status = "standard"
 
@@ -27,7 +27,7 @@ organization = "Facebook Inc."
   city = "Menlo Park"
   country = "U.S.A."
   code = "CA 94025"
-  
+
 [[author]]
 initials = "A."
 surname = "Frindell"
@@ -60,7 +60,7 @@ server push. That is, servers can initiate unidirectional push promised streams
 to clients, but clients cannot respond to them, except accept or discard them
 silently. While this satisfies some use-cases, its unidirectional property
 limits HTTP/2 for wider use, for example, send messages and notifications from
-servers to clients at the time they are available. 
+servers to clients at the time they are available.
 
 To work around this limitation, many techniques are developed, like long polling
 [@!RFC6202], WebSocket [@!RFC8441], and tunneling. They are common at: layering
@@ -175,7 +175,7 @@ and CDN three different services within one HTTP/2 connection.
   |   |     RStream (7)    /  |  |   \    RStream (5)   +----------+
   |   +-------------------+   |  |    +---------------->|    RPC   |
   |                           |  |                      +----------+
-  |                           |  |  
+  |                           |  |
   |         Stream (9)        |  |      Stream (7)      +----------+
   +---------------------------+  +--------------------->|    CDN   |
                                                         +----------+
