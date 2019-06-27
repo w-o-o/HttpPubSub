@@ -1,11 +1,24 @@
-# HttpPubSub
+# An HTTP/2 Extension for bidirectional message communication
 
-## prerequisite 
-need two tools for generating rfc style txt file
-* install mmark from https://github.com/mmarkdown/mmark
-* install xml2rfc from https://xml2rfc.tools.ietf.org/
+This is the working area for the individual Internet-Draft, "An HTTP/2 Extension for bidirectional message communication".
 
-## compile
-    % PATH/mmark pubsub.md > pubsub.xml  
-    % xml2rfc --text pubsub.xml  
-    % ls -hl pubsub.txt
+* [Editor's Copy](https://afrind.github.io/HttpPubSub/#go.draft-xie-bidirectional-messaging-latest.html)
+* [Individual Draft](https://tools.ietf.org/html/draft-xie-bidirectional-messaging-latest)
+* [Compare Editor's Copy to Individual Draft](https://afrind.github.io/HttpPubSub/#go.draft-xie-bidirectional-messaging-latest.diff)
+
+## Building the Draft
+
+Formatted text and HTML versions of the draft can be built using `make`.
+
+```sh
+$ make
+```
+
+This requires that you have the necessary software installed.  See
+[the instructions](https://github.com/martinthomson/i-d-template/blob/master/doc/SETUP.md).
+
+
+## Contributing
+
+See the
+[guidelines for contributions](https://github.com/afrind/HttpPubSub/blob/master/CONTRIBUTING.md).
