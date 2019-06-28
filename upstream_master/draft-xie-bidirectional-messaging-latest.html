@@ -1,0 +1,680 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head profile="http://www.w3.org/2006/03/hcard http://dublincore.org/documents/2008/08/04/dc-html/">
+  <meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
+
+  <title>An HTTP/2 Extension for bidirectional message communication</title>
+
+  
+<style type="text/css">/*<![CDATA[*/
+
+body {
+  font: 16px "Helvetica Neue","Open Sans",Helvetica,Calibri,sans-serif;
+  color: #333;
+  font-size-adjust: 0.5;
+  line-height: 24px;
+  margin: 75px auto;
+  max-width: 624px;
+  padding: 0 5px;
+}
+
+.title, .filename, h1, h2, h3, h4, h5 {
+  font: 16px "Roboto Condensed","Helvetica Neue","Open Sans",Helvetica,Calibri,sans-serif;
+  font-size-adjust: 0.5;
+  font-weight: bold;
+  color: #333;
+  line-height: 100%;
+  margin: 1.2em 0 0.3em;
+}
+.title, #rfc\.title h1 { font-size: 32px; }
+h1, section h1, h2, section h2, section h3, nav h2 { font-size: 20px; }
+h3, section h4, h4, section h5 { font-size: 16px; }
+h1 a[href], h2 a[href], h3 a[href], h4 a[href] {
+  color: #333;
+}
+
+table {
+  margin-left: 0em;
+  border-collapse: collapse;
+}
+th {
+  text-align: left;
+  border-bottom: 2px solid #ddd;
+}
+td {
+  border-top: 1px solid #ddd;
+  vertical-align: top;
+}
+tr:nth-child(2n+1) > td,
+tr:nth-child(2n+1) > th {
+  background-color: #f9f9f9;
+}
+td.reference {
+  max-width: 200px;
+  border-top: none;
+  padding-right: 1em;
+}
+.right {
+  text-align: right;
+}
+
+
+table.header, table#rfc\.headerblock {
+  width: 100%;
+}
+table.header td, table#rfc\.headerblock td {
+  border: none;
+  background-color: transparent;
+  color: black;
+  padding: 0;
+}
+.filename {
+  display: block;
+  color: rgb(119, 119, 119);
+  font-size: 20px;
+  font-weight: normal;
+  line-height: 100%;
+  margin: 10px 0 32px;
+}
+#rfc\.abstract+p, #rfc\.abstract+p code, #rfc\.abstract+p samp, #rfc\.abstract+p tt {
+  font-size: 20px;
+  line-height: 28px;
+}
+
+samp, tt, code, pre, span.tt {
+  font-size: 13.5px;
+  font-family: Consolas, monospace;
+  font-size-adjust: none;
+}
+pre {
+  background-color: #eee;
+  border: 1px solid #ddd;
+  overflow-x: auto;
+  padding: 5px;
+  margin: 5px;
+}
+.figure, caption {
+  font-style: italic;
+  margin: 0 1.5em;
+  text-align: left;
+}
+
+address {
+  margin: 16px 2px;
+  line-height: 20px;
+}
+.vcard {
+  font-style: normal;
+}
+.vcardline {
+  display: block;
+}
+.vcardline .fn, address b {
+  font-weight: normal;
+}
+.vcardline .hidden {
+  display: none;
+}
+
+dl {
+  margin-left: 1em;
+}
+dl.dl-horizontal: {
+  margin-left: 0;
+}
+dl > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl.nohang > dt {
+  float: none;
+}
+dl > dd {
+  margin-bottom: .5em;
+}
+dl.compact > dd {
+  margin-bottom: 0em;
+}
+dl > dd > dl {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+ul.empty {
+  list-style-type: none;
+}
+ul.empty li {
+  margin-top: .5em;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid #eee;
+}
+hr.noprint {
+  display: none;
+}
+
+a {
+  text-decoration: none;
+}
+a[href] {
+  color: #2a6496;
+}
+a[href]:hover {
+  background-color: #eee;
+}
+
+p, ol, ul, li {
+  padding: 0;
+}
+p {
+  margin: 0.5em 0;
+}
+ol, ul {
+  margin: 0.2em 0 0.2em 2em;
+}
+li {
+  margin: 0.2em 0;
+}
+address {
+  font-style: normal;
+}
+
+ul.toc ul {
+  margin: 0 0 0 2em;
+}
+ul.toc li {
+  list-style: none;
+  margin: 0;
+}
+
+@media screen and (min-width: 924px) {
+  body {
+    padding-right: 350px;
+  }
+  body>ul.toc, body>#rfc\.toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 500px);
+    width: 300px;
+    z-index: 1;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  body>#rfc\.toc {
+    top: 55px;
+  }
+  body>ul.toc {
+    top: 100px;
+  }
+
+  ul.toc {
+    margin: 0 0 0 4px;
+    font-size: 12px;
+    line-height: 20px;
+  }
+  ul.toc ul {
+    margin-left: 1.2em;
+  }
+}
+
+.github-fork-ribbon-wrapper {
+  display: none;
+}
+@media screen and (min-width: 800px) {
+  /* "Fork me on GitHub" CSS ribbon based on
+   * https://github.com/simonwhitaker/github-fork-ribbon-css
+   */
+  .github-fork-ribbon {
+    position: absolute;
+    padding: 2px 0;
+    background-color: #a00;
+    background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.15));
+    box-shadow: 0 2px 3px 0 rgba(0, 0, 0, 0.5);
+    font: 700 12px "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+    pointer-events: auto;
+
+    top: 38px;
+    right: -45px;
+
+    transform: rotate(45deg);
+  }
+
+  .github-fork-ribbon a[href],
+  .github-fork-ribbon a[href]:hover {
+    color: #fff;
+    background-color: transparent;
+    text-decoration: none;
+    text-shadow: 0 -1px rgba(0, 0, 0, 0.5);
+    text-align: center;
+
+    width: 190px;
+    line-height: 18px;
+
+    display: inline-block;
+    padding: 2px 0;
+
+    border: 1.5px dotted #fff;
+    border-color: rgba(255, 255, 255, 0.6);
+  }
+
+  .github-fork-ribbon-wrapper {
+    display: block;
+    width: 130px;
+    height: 130px;
+    position: absolute;
+    overflow: hidden;
+    top: 0; right: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+}
+@media screen and (min-width: 1000px) {
+  .github-fork-ribbon-wrapper {
+    position: fixed;
+  }
+  /*]]>*/</style>
+  <meta name="viewport" content="initial-scale=1.0">
+
+
+  <link href="#rfc.toc" rel="Contents">
+<link href="#rfc.section.1" rel="Chapter" title="1 Introduction">
+<link href="#rfc.section.2" rel="Chapter" title="2 Conventions and Terminology">
+<link href="#rfc.section.3" rel="Chapter" title="3 Solution Overview">
+<link href="#rfc.section.3.1" rel="Chapter" title="3.1 RStream and XStream">
+<link href="#rfc.section.3.2" rel="Chapter" title="3.2 Bidirectional Communication">
+<link href="#rfc.section.3.3" rel="Chapter" title="3.3 States of RStream and XStream">
+<link href="#rfc.section.3.4" rel="Chapter" title="3.4 Negotiate the Extension Through SETTINGS Frame">
+<link href="#rfc.section.3.5" rel="Chapter" title="3.5 Interact with Standard HTTP/2 Features">
+<link href="#rfc.section.4" rel="Chapter" title="4 HTTP/2 XHEADERS Frame">
+<link href="#rfc.section.4.1" rel="Chapter" title="4.1 Definition">
+<link href="#rfc.section.4.2" rel="Chapter" title="4.2 Examples">
+<link href="#rfc.section.5" rel="Chapter" title="5 IANA Considerations">
+<link href="#rfc.section.5.1" rel="Chapter" title="5.1 FRAME TYPE Registry">
+<link href="#rfc.section.5.2" rel="Chapter" title="5.2 Settings Registry">
+<link href="#rfc.section.5.3" rel="Chapter" title="5.3 Error Code Registry">
+<link href="#rfc.references" rel="Chapter" title="6 Normative References">
+<link href="#rfc.authors" rel="Chapter">
+
+
+  <meta name="generator" content="xml2rfc version 2.9.2 - https://tools.ietf.org/tools/xml2rfc" />
+  <link rel="schema.dct" href="http://purl.org/dc/terms/" />
+
+  <meta name="dct.creator" content="Xie, G. and A. Frindell" />
+  <meta name="dct.identifier" content="urn:ietf:id:draft-xie-bidirectional-messaging-latest" />
+  <meta name="dct.issued" scheme="ISO8601" content="2019-06-28" />
+  <meta name="dct.abstract" content=".# Abstract This draft proposes an http2 protocol extension, which enables bidirectional messaging communication between client and server." />
+  <meta name="description" content=".# Abstract This draft proposes an http2 protocol extension, which enables bidirectional messaging communication between client and server." />
+
+</head>
+
+<body>
+
+  <table class="header">
+    <tbody>
+    
+    	<tr>
+<td class="left">httpbis Working Group</td>
+<td class="right">G. Xie</td>
+</tr>
+<tr>
+<td class="left">Internet-Draft</td>
+<td class="right">A. Frindell</td>
+</tr>
+<tr>
+<td class="left">Expires: December 30, 2019</td>
+<td class="right">Facebook Inc.</td>
+</tr>
+<tr>
+<td class="left"></td>
+<td class="right">June 28, 2019</td>
+</tr>
+
+    	
+    </tbody>
+  </table>
+
+  <p class="title">An HTTP/2 Extension for bidirectional message communication<br />
+  <span class="filename">draft-xie-bidirectional-messaging-latest</span></p>
+  
+  <h1 id="rfc.abstract"><a href="#rfc.abstract">Abstract</a></h1>
+<p>.# Abstract This draft proposes an http2 protocol extension, which enables bidirectional messaging communication between client and server.</p>
+<h1 id="rfc.status"><a href="#rfc.status">Status of This Memo</a></h1>
+<p>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</p>
+<p>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF).  Note that other groups may also distribute working documents as Internet-Drafts.  The list of current Internet-Drafts is at https://datatracker.ietf.org/drafts/current/.</p>
+<p>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time.  It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."</p>
+<p>This Internet-Draft will expire on December 30, 2019.</p>
+<h1 id="rfc.copyrightnotice"><a href="#rfc.copyrightnotice">Copyright Notice</a></h1>
+<p>Copyright (c) 2019 IETF Trust and the persons identified as the document authors.  All rights reserved.</p>
+<p>This document is subject to BCP 78 and the IETF Trust's Legal Provisions Relating to IETF Documents (https://trustee.ietf.org/license-info) in effect on the date of publication of this document.  Please review these documents carefully, as they describe your rights and restrictions with respect to this document.  Code Components extracted from this document must include Simplified BSD License text as described in Section 4.e of the Trust Legal Provisions and are provided without warranty as described in the Simplified BSD License.</p>
+<h1 id="rfc.section.1">
+<a href="#rfc.section.1">1.</a> <a href="#introduction" id="introduction">Introduction</a>
+</h1>
+<p id="rfc.section.1.p.1">HTTP/2 is the de facto application protocol in Internet. The optimizations developed in HTTP/2, like stream multiplexing, header compression, efficient binary message framing, and graceful shutdown of open streams, are very generic.  They can be useful in non web browsing applications, for example, Publish/Subscribe, RPC. However, the unidirectional from client to server communication pattern limits HTTP/2 from wider use in these applications. This draft proposes an HTTP/2 protocol extension, which enables bidirectional communication between client and server.</p>
+<p id="rfc.section.1.p.2">So far, the only mechanism HTTP/2 provides for server to client communication is server push. That is, servers can initiate unidirectional push promised streams to clients, but clients cannot respond to them, except accept or discard them silently. While this satisfies some use-cases, its unidirectional property limits HTTP/2 for wider use, for example, send messages and notifications from servers to clients at the time they are available.</p>
+<p id="rfc.section.1.p.3">To work around this limitation, many techniques are developed, like long polling <a href="#RFC6202" class="xref">[RFC6202]</a>, WebSocket <a href="#RFC8441" class="xref">[RFC8441]</a>, and tunneling. They are common at: layering application protocol on top of HTTP/2 and using HTTP/2 streams as transport connections. These solutions more or less defeat the optimizations provided by HTTP/2. For example, first, if multiplexing multiple parallel interactions into one HTTP/2 stream, the head of line block will be re-introduced. Second, application meta data is encapsulated into DATA frame, rather than HEADERS frame, so header compression is impossible. Third, user data are framed more than once at different protocol layers, which offsets the wire efficiency from HTTP/2 binary frame. Take WebSocket over HTTP/2 as an example, user data is framed at application protocol, WebSocket, and HTTP/2 layers. This not only introduces the byte overhead on the wire, but also complicates the data processing. These techniques also pose new operational challenges to intermediaries. Due to the traffic from the whole user session is encapsulated into one HTTP/2 stream, this stream can last very long time. Intermediaries may take long time to drain these streams. As a remind, GOAWAY can only signals the remote endpoint to stop using the connection for new streams and does not help the open streams. Moreover, intermediaries have no visibility to user interactions, and lose the capability to collect telemetry metrics (e.g., time to the first/last byte of request and response) for services.</p>
+<p id="rfc.section.1.p.4">In this draft, a new HTTP/2 frame is introduced which has the routing properties of PUSH_PROMISE frame and the bi-directionality of HEADERS frame. The extension provides several benefits: 1) after a HTTP/2 connection setup, a server can initiate streams to the client anytime, and the client can respond to the incoming streams accordingly. That is, the communication over HTTP/2 is bidirectional and symmetric. 2) All the HTTP/2 optimizations still apply.  Intermediaries also have all the necessary meta data to accomplish their goals.  3) Further, clients are able to group streams together for routing purposes, such that each individual stream group can be used for a different service, within the same HTTP/2 connections.</p>
+<h1 id="rfc.section.2">
+<a href="#rfc.section.2">2.</a> <a href="#conventions-and-terminology" id="conventions-and-terminology">Conventions and Terminology</a>
+</h1>
+<p id="rfc.section.2.p.1">The keywords <strong>MUST</strong>, <strong>MUST NOT</strong>, <strong>REQUIRED</strong>, <strong>SHALL</strong>, <strong>SHALL NOT</strong>, <strong>SHOULD</strong>, <strong>SHOULD NOT</strong>, <strong>RECOMMENDED</strong>, <strong>MAY</strong>, and <strong>OPTIONAL</strong>, when they appear in this document, are to be interpreted as described in <a href="#RFC2119" class="xref">[RFC2119]</a>.</p>
+<p id="rfc.section.2.p.2">All the terms defined in the Conventions and Terminology section in <a href="#RFC7540" class="xref">[RFC7540]</a> apply to this document.</p>
+<h1 id="rfc.section.3">
+<a href="#rfc.section.3">3.</a> <a href="#solution-overview" id="solution-overview">Solution Overview</a>
+</h1>
+<h1 id="rfc.section.3.1">
+<a href="#rfc.section.3.1">3.1.</a> <a href="#rstream-and-xstream" id="rstream-and-xstream">RStream and XStream</a>
+</h1>
+<p id="rfc.section.3.1.p.1">A routing stream (RStream) is a long lived HTTP/2 stream in nature. RStreams are initiated by clients, and can be routed independently by any intermediaries.  Though an RStream is effectively a regular HTTP/2 stream, RStreams are recommended for exchanging metadata, but not user data.</p>
+<p id="rfc.section.3.1.p.2">A new HTTP/2 stream called XStream is introduced for exchanging user data.  XStreams are <strong>RECOMMENDED</strong> for short lived transactions, so intermediaries and servers can gracefully shutdown XStreams within a short time. The typical use case can be a subscription or publish request/response in Publish/Subscribe use case, or an RPC call between two endpoints.</p>
+<p id="rfc.section.3.1.p.3">An XStream is opened by an XHEADERS frame, and continued by CONTINUATION and DATA frames. An XStream <strong>MUST</strong> be associated with an open RStream, and <strong>MUST NOT</strong> be associated with any other XStream. XStreams are routed according to their RStreams by intermediaries and servers. Effectively, all XStreams with the same RStream form a logical stream group, and are routed to the same endpoint.</p>
+<h1 id="rfc.section.3.2">
+<a href="#rfc.section.3.2">3.2.</a> <a href="#bidirectional-communication" id="bidirectional-communication">Bidirectional Communication</a>
+</h1>
+<p id="rfc.section.3.2.p.1">With RStreams and XStreams, HTTP/2 can be used for bidirectional messaging communication. As shown in the follow diagrams, after an RStream is open from client to server, either endpoint can initiate an XStreams to its peer.</p>
+<div id="rfc.figure.1"></div>
+<div id="fig-client-to-server"></div>
+<pre>
++--------+   RStream (5)   +---------+    RStream (1)   +--------+
+| client |&gt;---------------&gt;|  proxy  |&gt;----------------&gt;| server |
++--------+                 +---------+                  +--------+
+    v                        ^     v                        ^
+    |    XStream(7, RS=5)    |     |    XStream(3, RS=1)    |
+    +------------------------+     +------------------------+
+</pre>
+<p class="figure">Figure 1: Client initiates the XStream to server, after  an RStream is open.</p>
+<div id="rfc.figure.2"></div>
+<div id="fig-server-to-client"></div>
+<pre>
++--------+   RStream (5)   +---------+    RStream (1)   +--------+
+| client |&gt;---------------&gt;|  proxy  |&gt;----------------&gt;| server |
++--------+                 +---------+                  +--------+
+     ^                        v     ^                        v
+     |    XStream(4, RS=5)    |     |    XStream(2, RS=1)    |
+     +------------------------+     +------------------------+
+</pre>
+<p class="figure">Figure 2: Server initiates an XStream to client, after  an RStream is open.</p>
+<p id="rfc.section.3.2.p.2">Beyond that, a client can multiplex RStreams, XStreams and regular HTTP/2 streams into one single HTTP/2 connection. This enables clients to access different services without initiating new transport layer connections. This saves the latency of setting up new connections. This is more desirable for mobile devices because they usually have longer latency network connectivity and tighten battery constraints. Multiplexing these services also allows them to share a single transport connection congestion control context. It could open new optimization opportunities, like prioritizing interactive streams over static content fetching streams.</p>
+<p id="rfc.section.3.2.p.3">As shown in the following diagram, the client can exchange data with PubSub, RPC and CDN three different services within one HTTP/2 connection.</p>
+<div id="rfc.figure.3"></div>
+<div id="fig-multiplex"></div>
+<pre>
++--------+   RStream (5)   +---------+    RStream (1)   +----------+
+| client |&gt;---------------&gt;|  proxy  |&gt;----------------&gt;|  PUBSUB  |
++--------+                 +---------+                  +----------+
+  v   v                     ^ ^  v  v
+  |   |     RStream (7)    /  |  |   \    RStream (5)   +----------+
+  |   +-------------------+   |  |    +----------------&gt;|    RPC   |
+  |                           |  |                      +----------+
+  |                           |  |
+  |         Stream (9)        |  |      Stream (7)      +----------+
+  +---------------------------+  +---------------------&gt;|    CDN   |
+                                                        +----------+
+</pre>
+<p class="figure">Figure 3: Client opens multiple RStreams and an HTTP/2 stream  within one HTTP/2 connection.</p>
+<h1 id="rfc.section.3.3">
+<a href="#rfc.section.3.3">3.3.</a> <a href="#states-of-rstream-and-xstream" id="states-of-rstream-and-xstream">States of RStream and XStream</a>
+</h1>
+<p id="rfc.section.3.3.p.1">RStreams are regular HTTP/2 streams that follow the stream lifecycle in <a href="#RFC7540" class="xref">[RFC7540]</a>, section 5.1. XStreams use the same lifecycle as regular HTTP/2 streams, but have extra dependence on their RStreams. If an RStream is reset, endpoints <strong>MUST</strong> reset the XStreams associated with that RStream. If the RStream is closed, endpoints <strong>SHOULD</strong> allow the existing XStreams to complete normally. The RStream <strong>SHOULD</strong> remain open while communication is ongoing.  Endpoints <strong>SHOULD</strong> refresh any timeout on the RStream while its associated XStreams are open.</p>
+<p id="rfc.section.3.3.p.2">A sender <strong>MUST NOT</strong> initiate new XStreams if on an RStream that is in the open or half closed (remote) state.</p>
+<p id="rfc.section.3.3.p.3">Endpoints process new XStreams only when the RStream is open or half closed (local) state. If an endpoint receives an XHEADERS frame specifying an RStream in the closed or haf closed (remote) state, it <strong>MUST</strong> respond with a connection error of type ROUTING_STREAM_ERROR.</p>
+<h1 id="rfc.section.3.4">
+<a href="#rfc.section.3.4">3.4.</a> <a href="#negotiate-the-extension-through-settings-frame" id="negotiate-the-extension-through-settings-frame">Negotiate the Extension Through SETTINGS Frame</a>
+</h1>
+<p id="rfc.section.3.4.p.1">The extension <strong>SHOULD</strong> be disabled by default. As suggested in <a href="#RFC7540" class="xref">[RFC7540]</a>, section 5.5, the unknown ENABLE_XHEADERS setting and XHEADERS frame <strong>MUST</strong> be ignored by HTTP/2 compliant implementations, which have supported this extension yet.</p>
+<p id="rfc.section.3.4.p.2">Endpoints can negotiate the use of the extension through the SETTINGS frame. If an implementation supports the extension, it is <strong>RECOMMENDED</strong> to include the ENABLE_XHEADERS setting in the initial SETTINGS frame, such that the remote endpoint can disover the support at the earliest time. Once enabled, this extension <strong>MUST NOT</strong> be disabled over the lifetime of the connection.</p>
+<p id="rfc.section.3.4.p.3">An endpoint can send XHEADERS frames immediately upon receiving a SETTINGS frame with ENABLE_XHEADERS=1.</p>
+<p id="rfc.section.3.4.p.4">An endpoint <strong>MUST NOT</strong> send out XHEADERS before receiving a SETTINGS frame with the ENABLE_XHEADERS=1. If a remote endpoint does not support this extension yet, the XHEADERS will be ignored, making the header compression contexts inconsistent between sender and receiver.</p>
+<p id="rfc.section.3.4.p.5">If an endpoint supports this extension, but receives XHEADERS frames before ENABLE_XHEADERS, it is <strong>RECOMMENDED</strong> to respond with a connection error XHEADER_NOT_ENABLED_ERROR. This helps the remote endpoint to implement this extension properly.</p>
+<p id="rfc.section.3.4.p.6">Intermediaries <strong>SHOULD</strong> send the ENABLE_XHEADERS setting to clients, only if intermediaries and their upstream servers can support this extension. If an intermediary receives an XStream but discovers the destination endpoint does not support the extension, it <strong>MUST</strong> reset the stream with XHEADER_NOT_ENABLED_ERROR.</p>
+<h1 id="rfc.section.3.5">
+<a href="#rfc.section.3.5">3.5.</a> <a href="#interact-with-standard-http2-features" id="interact-with-standard-http2-features">Interact with Standard HTTP/2 Features</a>
+</h1>
+<p id="rfc.section.3.5.p.1">The extension implementation <strong>SHOULD</strong> apply stream and connection level flow control, maximum concurrent streams limit, GOAWAY logic to both RStreams and XStreams.</p>
+<h1 id="rfc.section.4">
+<a href="#rfc.section.4">4.</a> <a href="#http2-xheaders-frame" id="http2-xheaders-frame">HTTP/2 XHEADERS Frame</a>
+</h1>
+<p id="rfc.section.4.p.1">The XHEADERS frame (type=0xfb) has all the fields and frame header flags defined by HEADERS frame in HEADERS <a href="#RFC7540" class="xref">[RFC7540]</a>, section 6.2. Moreover, an XHEADERS frame has one extra field, Routing Stream ID. It is used to open an XStream, and additionally carries a header block fragment. XHEADERS frames can be sent on a stream in the &#8220;idle&#8221;, &#8220;open&#8221;, or &#8220;half-closed (remote)&#8221; state.</p>
+<p id="rfc.section.4.p.2">Like HEADERS, the CONTINUATION frame (type=0x9) is used to continue a sequence of header block fragments, if the headers do not fit into one XHEADERS frame.</p>
+<h1 id="rfc.section.4.1">
+<a href="#rfc.section.4.1">4.1.</a> <a href="#definition" id="definition">Definition</a>
+</h1>
+<div id="rfc.figure.4"></div>
+<div id="fig-ex-headers-frame"></div>
+<pre>
+ +---------------+
+ |Pad Length? (8)|
+ +-+-------------+-----------------------------------------------+
+ |E|                 Stream Dependency? (31)                     |
+ +-+-------------+-----------------------------------------------+
+ |  Weight? (8)  |
+ +-+-------------+-----------------------------------------------+
+ |R|                 Routing Stream ID (31)                      |
+ +-+-------------+-----------------------------------------------+
+ |                   Header Block Fragment (*)                 ...
+ +---------------------------------------------------------------+
+ |                           Padding (*)                       ...
+ +---------------------------------------------------------------+
+</pre>
+<p class="figure">Figure 4: XHEADERS Frame Payload</p>
+<p id="rfc.section.4.1.p.1">The RStream specified in a XHEADERS frame <strong>MUST</strong> be an open stream. The recipient <strong>MUST</strong> respond with a connection error of type ROUTING_STREAM_ERROR PROTOCOL_ERROR, if the specified RStream is missing; or is an XStream rather than a regualr HTTP/2 stream; or is closed or half-closed (remote). Otherwise, the states maintained for header compression or flow control) may be out of sync.</p>
+<h1 id="rfc.section.4.2">
+<a href="#rfc.section.4.2">4.2.</a> <a href="#examples" id="examples">Examples</a>
+</h1>
+<p id="rfc.section.4.2.p.1">This section shows HTTP/1.1 request and response messages are transmitted on RStream with regualar HEADERS frames, and on XStream with HTTP/2 XHAEDERS frames.</p>
+<div id="rfc.figure.5"></div>
+<div id="c2s-rstream-req"></div>
+<pre>
+  GET /login HTTP/1.1               HEADERS
+  Host: example.org          ==&gt;     - END_STREAM
+                                     + END_HEADERS
+                                       :method = GET
+                                       :scheme = https
+                                       :path = /login
+                                       host = example.org
+
+  {binary data .... }         ==&gt;   DATA
+                                     - END_STREAM
+                                       {binary data ... }
+</pre>
+<p class="figure">Figure 5: The request message and HEADERS frame on an  RStream</p>
+<div id="rfc.figure.6"></div>
+<div id="c2s-rstream-resp"></div>
+<pre>
+  HTTP/1.1 200 OK                   HEADERS
+                            ==&gt;      - END_STREAM
+                                     + END_HEADERS
+                                       :status = 200
+
+  {binary data .... }        ==&gt;    DATA
+                                     - END_STREAM
+                                       {binary data...}
+</pre>
+<p class="figure">Figure 6: The response message and HEADERS frame on an  RStream</p>
+<p id="rfc.section.4.2.p.2">The server initiate an XStream to this client.</p>
+<div id="rfc.figure.7"></div>
+<div id="s2c-xstream-req"></div>
+<pre>
+  POST /new_msg HTTP/1.1            XHEADERS
+                                       RStream_ID = 3
+  Host: example.org          ==&gt;     - END_STREAM
+                                     + END_HEADERS
+                                       :method = POST
+                                       :scheme = https
+                                       :path = /new_msg
+                                       host = example.org
+  {binary data}              ==&gt;    DATA
+                                     + END_STREAM
+                                       {binary data}
+</pre>
+<p class="figure">Figure 7: The request message and XHEADERS frame on an  XStream</p>
+<div id="rfc.figure.8"></div>
+<div id="s2c-xstream-resp"></div>
+<pre>
+  HTTP/1.1 200 OK                   XHEADERS
+                                       RStream_ID = 3
+                             ==&gt;     + END_STREAM
+                                     + END_HEADERS
+                                       :status = 200
+</pre>
+<p class="figure">Figure 8: The response message and XHEADERS frame on an  XStream</p>
+<h1 id="rfc.section.5">
+<a href="#rfc.section.5">5.</a> <a href="#iana-considerations" id="iana-considerations">IANA Considerations</a>
+</h1>
+<p id="rfc.section.5.p.1">This document establishes a registry for a new frame type, setting, and error code.</p>
+<h1 id="rfc.section.5.1">
+<a href="#rfc.section.5.1">5.1.</a> <a href="#frame-type-registry" id="frame-type-registry">FRAME TYPE Registry</a>
+</h1>
+<p id="rfc.section.5.1.p.1">The entry in the following table are registered by this document.</p>
+<pre>
+   +---------------+------+--------------+
+   | Frame Type    | Code | Section      |
+   +---------------+------+--------------+
+   | XHEADERS      | 0xfb |              |
+   +---------------+------+--------------+
+</pre>
+<h1 id="rfc.section.5.2">
+<a href="#rfc.section.5.2">5.2.</a> <a href="#settings-registry" id="settings-registry">Settings Registry</a>
+</h1>
+<p id="rfc.section.5.2.p.1">The entry in the following table are registered by this document.</p>
+<pre>
++------------------------+--------+---------------+---------------+
+| Name                   | Code   | Initial Value | Specification |
++------------------------+--------+---------------+---------------+
+| ENABLE_XHEADERS        | 0xfbfb | 0             |               |
++------------------------+--------+---------------+---------------+
+</pre>
+<h1 id="rfc.section.5.3">
+<a href="#rfc.section.5.3">5.3.</a> <a href="#error-code-registry" id="error-code-registry">Error Code Registry</a>
+</h1>
+<p id="rfc.section.5.3.p.1">The entry in the following table are registered by this document.</p>
+<pre>
++----------------------+------+-------------------+---------------+
+| Name                 | Code | Description       | Specification |
++----------------------+------+-------------------+---------------+
+| ROUTING_STREAM_ERROR | 0xfb | Routing stream is |               |
+|                      |      | not open          |               |
+| XHEADERS_NOT_        | 0xfc | XHEADERS is not   |               |
+| ENABLED_ERROR        |      | enabled yet       |               |
++----------------------+------+-------------------+---------------+
+</pre>
+<h1 id="rfc.references">
+<a href="#rfc.references">6.</a> Normative References</h1>
+<table><tbody>
+<tr>
+<td class="reference"><b id="RFC2119">[RFC2119]</b></td>
+<td class="top">
+<a>Bradner, S.</a>, "<a href="https://tools.ietf.org/html/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a>", BCP 14, RFC 2119, DOI 10.17487/RFC2119, March 1997.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC6202">[RFC6202]</b></td>
+<td class="top">
+<a>Loreto, S.</a>, <a>Saint-Andre, P.</a>, <a>Salsano, S.</a> and <a>G. Wilkins</a>, "<a href="https://tools.ietf.org/html/rfc6202">Known Issues and Best Practices for the Use of Long Polling and Streaming in Bidirectional HTTP</a>", RFC 6202, DOI 10.17487/RFC6202, April 2011.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC7540">[RFC7540]</b></td>
+<td class="top">
+<a>Belshe, M.</a>, <a>Peon, R.</a> and <a>M. Thomson</a>, "<a href="https://tools.ietf.org/html/rfc7540">Hypertext Transfer Protocol Version 2 (HTTP/2)</a>", RFC 7540, DOI 10.17487/RFC7540, May 2015.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC8441">[RFC8441]</b></td>
+<td class="top">
+<a>McManus, P.</a>, "<a href="https://tools.ietf.org/html/rfc8441">Bootstrapping WebSockets with HTTP/2</a>", RFC 8441, DOI 10.17487/RFC8441, September 2018.</td>
+</tr>
+</tbody></table>
+<h1 id="rfc.authors"><a href="#rfc.authors">Authors' Addresses</a></h1>
+<div class="avoidbreak">
+  <address class="vcard">
+	<span class="vcardline">
+	  <span class="fn">Guowu Xie</span> 
+	  <span class="n hidden">
+		<span class="family-name">Xie</span>
+	  </span>
+	</span>
+	<span class="org vcardline">Facebook Inc.</span>
+	<span class="adr">
+	  
+	  <span class="vcardline">
+		<span class="locality"></span> 
+		<span class="region"></span>
+		<span class="code"></span>
+	  </span>
+	  <span class="country-name vcardline"></span>
+	</span>
+	<span class="vcardline">EMail: <a href="mailto:woo@fb.com">woo@fb.com</a></span>
+
+  </address>
+</div><div class="avoidbreak">
+  <address class="vcard">
+	<span class="vcardline">
+	  <span class="fn">Alan Frindell</span> 
+	  <span class="n hidden">
+		<span class="family-name">Frindell</span>
+	  </span>
+	</span>
+	<span class="org vcardline">Facebook Inc.</span>
+	<span class="adr">
+	  
+	  <span class="vcardline">
+		<span class="locality"></span> 
+		<span class="region"></span>
+		<span class="code"></span>
+	  </span>
+	  <span class="country-name vcardline"></span>
+	</span>
+	<span class="vcardline">EMail: <a href="mailto:afrind@fb.com">afrind@fb.com</a></span>
+
+  </address>
+</div>
+  
+  <hr class="noprint" />
+  <h1 class="np" id="rfc.toc"><a href="#rfc.toc">Table of Contents</a></h1>
+  <ul class="toc">
+
+  	<li>1.   <a href="#rfc.section.1">Introduction</a>
+</li>
+<li>2.   <a href="#rfc.section.2">Conventions and Terminology</a>
+</li>
+<li>3.   <a href="#rfc.section.3">Solution Overview</a>
+</li>
+<ul><li>3.1.   <a href="#rfc.section.3.1">RStream and XStream</a>
+</li>
+<li>3.2.   <a href="#rfc.section.3.2">Bidirectional Communication</a>
+</li>
+<li>3.3.   <a href="#rfc.section.3.3">States of RStream and XStream</a>
+</li>
+<li>3.4.   <a href="#rfc.section.3.4">Negotiate the Extension Through SETTINGS Frame</a>
+</li>
+<li>3.5.   <a href="#rfc.section.3.5">Interact with Standard HTTP/2 Features</a>
+</li>
+</ul><li>4.   <a href="#rfc.section.4">HTTP/2 XHEADERS Frame</a>
+</li>
+<ul><li>4.1.   <a href="#rfc.section.4.1">Definition</a>
+</li>
+<li>4.2.   <a href="#rfc.section.4.2">Examples</a>
+</li>
+</ul><li>5.   <a href="#rfc.section.5">IANA Considerations</a>
+</li>
+<ul><li>5.1.   <a href="#rfc.section.5.1">FRAME TYPE Registry</a>
+</li>
+<li>5.2.   <a href="#rfc.section.5.2">Settings Registry</a>
+</li>
+<li>5.3.   <a href="#rfc.section.5.3">Error Code Registry</a>
+</li>
+</ul><li>6.   <a href="#rfc.references">Normative References</a>
+</li>
+<li><a href="#rfc.authors">Authors' Addresses</a>
+</li>
+
+
+  </ul>
+
+  
+
+</body>
+</html>
+
