@@ -2,7 +2,7 @@
 
 This is the working area for the individual Internet-Draft, "An HTTP/2 Extension for bidirectional message communication".
 
-* [Editor's Copy](https://afrind.github.io/HttpPubSub/#go.draft-xie-bidirectional-messaging-latest.html)
+* [Editor's Copy](https://w-o-o.github.io/HttpPubSub/#go.draft-xie-bidirectional-messaging-latest.html)
 * [Individual Draft](https://tools.ietf.org/html/draft-xie-bidirectional-messaging-latest)
 * [Compare Editor's Copy to Individual Draft](https://afrind.github.io/HttpPubSub/#go.draft-xie-bidirectional-messaging-latest.diff)
 
@@ -21,4 +21,4 @@ This requires that you have the necessary software installed.  See
 ## Contributing
 
 See the
-[guidelines for contributions](https://github.com/afrind/HttpPubSub/blob/master/CONTRIBUTING.md).
+[guidelines for contributions](https://github.com/w-o-o/HttpPubSub/blob/master/CONTRIBUTING.md).
