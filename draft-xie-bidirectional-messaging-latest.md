@@ -123,7 +123,6 @@ With RStreams and XStreams, HTTP/2 can be used for bidirectional messaging
 communication. As shown in the follow diagrams, after an RStream is open from
 client to server, either endpoint can initiate an XStreams to its peer.
 
-{#fig-client-to-server}
 ~~~
 +--------+   RStream (5)   +---------+    RStream (1)   +--------+
 | client |>--------------->|  proxy  |>---------------->| server |
@@ -132,9 +131,9 @@ client to server, either endpoint can initiate an XStreams to its peer.
     |    XStream(7, RS=5)    |     |    XStream(3, RS=1)    |
     +------------------------+     +------------------------+
 ~~~
-Figure: Client initiates the XStream to server, after an RStream is open.
+{: #fig-client-to-server title="Client initiates the XStream to server, after 
+an RStream is open."}
 
-{#fig-server-to-client}
 ~~~
 +--------+   RStream (5)   +---------+    RStream (1)   +--------+
 | client |>--------------->|  proxy  |>---------------->| server |
@@ -143,7 +142,8 @@ Figure: Client initiates the XStream to server, after an RStream is open.
      |    XStream(4, RS=5)    |     |    XStream(2, RS=1)    |
      +------------------------+     +------------------------+
 ~~~
-Figure: Server initiates an XStream to client, after an RStream is open.
+{: #fig-server-to-client title="Server initiates an XStream to client, after 
+an RStream is open."}
 
 Beyond that, a client can multiplex RStreams, XStreams and regular HTTP/2
 streams into one single HTTP/2 connection. This enables clients to access
@@ -158,7 +158,6 @@ static content fetching streams.
 As shown in the following diagram, the client can exchange data with PubSub, RPC
 and CDN three different services within one HTTP/2 connection.
 
-{#fig-multiplex}
 ~~~
 +--------+   RStream (5)   +---------+    RStream (1)   +----------+
 | client |>--------------->|  proxy  |>---------------->|  PUBSUB  |
@@ -172,8 +171,8 @@ and CDN three different services within one HTTP/2 connection.
   +---------------------------+  +--------------------->|    CDN   |
                                                         +----------+
 ~~~
-Figure: Client opens multiple RStreams and an HTTP/2 stream within one HTTP/2
-connection.
+{: #fig-multiplex title="Client opens multiple RStreams and an HTTP/2 stream 
+within one HTTP/2 connection."}
 
 ## States of RStream and XStream
 
@@ -244,7 +243,6 @@ stream in the "idle", "open", or "half-closed (remote)" state.
 Like HEADERS, the CONTINUATION frame (type=0x9) is used to continue a sequence
 of header block fragments, if the headers do not fit into one XHEADERS frame.
 
-{#fig-ex-headers-frame}
 ~~~
  +---------------+
  |Pad Length? (8)|
@@ -260,7 +258,7 @@ of header block fragments, if the headers do not fit into one XHEADERS frame.
  |                           Padding (*)                       ...
  +---------------------------------------------------------------+
 ~~~
-Figure: XHEADERS Frame Payload
+{: #fig-ex-headers-frame title="XHEADERS Frame Payload"}
 
 The RStream specified in a XHEADERS frame **MUST** be an open stream. The
 recipient **MUST** respond with a connection error of type ROUTING_STREAM_ERROR
@@ -277,6 +275,7 @@ code.
 ## FRAME TYPE Registry
 
 The entry in the following table are registered by this document.
+
 ~~~
    +---------------+------+--------------+
    | Frame Type    | Code | Section      |
@@ -288,6 +287,7 @@ The entry in the following table are registered by this document.
 ## Settings Registry
 
 The entry in the following table are registered by this document.
+
 ~~~
 +------------------------+--------+---------------+---------------+
 | Name                   | Code   | Initial Value | Specification |
@@ -299,6 +299,7 @@ The entry in the following table are registered by this document.
 ## Error Code Registry
 
 The entry in the following table are registered by this document.
+
 ~~~
 +----------------------+------+-------------------+---------------+
 | Name                 | Code | Description       | Specification |
