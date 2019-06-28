@@ -117,7 +117,7 @@ NOT** be associated with any other XStream. XStreams are routed according to
 their RStreams by intermediaries and servers. Effectively, all XStreams with the
 same RStream form a logical stream group, and are routed to the same endpoint.
 
-## Bidirectional Messaging Communication
+## Bidirectional Communication
 
 With RStreams and XStreams, HTTP/2 can be used for bidirectional messaging
 communication. As shown in the follow diagrams, after an RStream is open from
@@ -193,7 +193,7 @@ Endpoints process new XStreams only when the RStream is open or half closed
 in the closed or haf closed (remote) state, it **MUST** respond with a
 connection error of type ROUTING_STREAM_ERROR.
 
-## Negotiate the Extension through SETTINGS frame
+## Negotiate the Extension Through SETTINGS Frame
 
 The extension **SHOULD** be disabled by default. As suggested in {{!RFC7540}},
 section 5.5, the unknown ENABLE_XHEADERS setting and XHEADERS frame **MUST** be
@@ -226,7 +226,7 @@ support the extension, it **MUST** reset the stream with
 XHEADER_NOT_ENABLED_ERROR.
 
 
-## Interaction with standard HTTP/2 features
+## Interact with Standard HTTP/2 Features
 
 The extension implementation **SHOULD** apply stream and connection level flow
 control, maximum concurrent streams limit, GOAWAY logic to both RStreams and
@@ -242,6 +242,8 @@ stream in the "idle", "open", or "half-closed (remote)" state.
 
 Like HEADERS, the CONTINUATION frame (type=0x9) is used to continue a sequence
 of header block fragments, if the headers do not fit into one XHEADERS frame.
+
+## Definition
 
 ~~~
  +---------------+
@@ -266,6 +268,70 @@ PROTOCOL_ERROR, if the specified RStream is missing; or is an XStream rather
 than a regualr HTTP/2 stream; or is closed or half-closed (remote). Otherwise,
 the states maintained for header compression or flow control) may be out of
 sync.
+
+## Examples
+This section shows HTTP/1.1 request and response messages are transmitted on 
+RStream with regualar HEADERS frames, and on XStream with HTTP/2 XHAEDERS 
+frames. 
+
+~~~
+  GET /login HTTP/1.1               HEADERS
+  Host: example.org          ==>     - END_STREAM
+                                     + END_HEADERS
+                                       :method = GET
+                                       :scheme = https
+                                       :path = /login
+                                       host = example.org
+
+  {binary data .... }         ==>   DATA
+                                     - END_STREAM
+                                       {binary data ... }
+~~~
+{: #c2s-rstream-req title="The request message and HEADERS frame on an 
+RStream"}
+
+~~~
+  HTTP/1.1 200 OK                   HEADERS
+                            ==>      - END_STREAM
+                                     + END_HEADERS
+                                       :status = 200
+
+  {binary data .... }        ==>    DATA
+                                     - END_STREAM
+                                       {binary data...}
+~~~
+{: #c2s-rstream-resp title="The response message and HEADERS frame on an 
+RStream"}
+
+The server initiate an XStream to this client.
+
+~~~
+  POST /new_msg HTTP/1.1            XHEADERS
+                                       RStream_ID = 3
+  Host: example.org          ==>     - END_STREAM
+                                     + END_HEADERS
+                                       :method = POST
+                                       :scheme = https
+                                       :path = /new_msg
+                                       host = example.org
+  {binary data}              ==>    DATA
+                                     + END_STREAM
+                                       {binary data}
+~~~
+{: #s2c-xstream-req title="The request message and XHEADERS frame on an 
+XStream"}
+
+~~~
+  HTTP/1.1 200 OK                   XHEADERS
+                                       RStream_ID = 3
+                             ==>     + END_STREAM
+                                     + END_HEADERS
+                                       :status = 200
+~~~
+{: #s2c-xstream-resp title="The response message and XHEADERS frame on an 
+XStream"}
+
+
 
 # IANA Considerations
 
