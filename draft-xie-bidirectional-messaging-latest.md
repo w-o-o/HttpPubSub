@@ -30,7 +30,6 @@ author:
 
 --- abstract
 
-.# Abstract
 This draft proposes an http2 protocol extension, which enables bidirectional
 messaging communication between client and server.
 
@@ -49,10 +48,13 @@ communication between client and server.
 
 So far, the only mechanism HTTP/2 provides for server to client communication is
 server push. That is, servers can initiate unidirectional push promised streams
-to clients, but clients cannot respond to them, except accept or discard them
-silently. While this satisfies some use-cases, its unidirectional property
-limits HTTP/2 for wider use, for example, send messages and notifications from
-servers to clients at the time they are available.
+to clients, but clients cannot respond to them, except accepting or discarding
+them silently. More interesting, the intermediaries may have different server
+push policies, and may not forward to downstream at all. The best effort
+mechanism is not reliable to deliver content from servers to clients. While this
+satisfies some use-cases, its unidirectional property limits HTTP/2 for wider
+use, for example, send messages and notifications from servers to clients at the
+time they are available.
 
 To work around this limitation, many techniques are developed, like long polling
 {{!RFC6202}}, WebSocket {{!RFC8441}}, and tunneling. They are common at:
@@ -100,28 +102,26 @@ apply to this document.
 
 ## RStream and XStream
 
-A routing stream (RStream) is a long lived HTTP/2 stream in nature. RStreams are
-initiated by clients, and can be routed independently by any intermediaries.
-Though an RStream is effectively a regular HTTP/2 stream, RStreams are
-recommended for exchanging metadata, but not user data.
+A routing stream (RStream) is a regular HTTP/2 stream in nature. It is opened by
+a HEADERS frame, and **MAY** be continued by CONTINUATION and DATA frames.
+RStreams are initiated by clients to servers, and can be independently routed by
+intermediaries on the network path. The main purpose for RStream is to
+facilitate XStreams' intermediary traversal.
 
-A new HTTP/2 stream called XStream is introduced for exchanging user data.
-XStreams are **RECOMMENDED** for short lived transactions, so intermediaries and
-servers can gracefully shutdown XStreams within a short time. The typical use
-case can be a subscription or publish request/response in Publish/Subscribe use
-case, or an RPC call between two endpoints.
-
-An XStream is opened by an XHEADERS frame, and continued by CONTINUATION and
-DATA frames. An XStream **MUST** be associated with an open RStream, and **MUST
-NOT** be associated with any other XStream. XStreams are routed according to
-their RStreams by intermediaries and servers. Effectively, all XStreams with the
-same RStream form a logical stream group, and are routed to the same endpoint.
+A new HTTP/2 stream called eXtended stream (XStream) is introduced for
+exchanging user data bidirectionally. An XStream is opened by an XHEADERS frame,
+and **MAY** be continued by CONTINUATION and DATA frames. XStreams can be
+initiated by either clients or servers. Another difference from a regular
+stream, an XStream **MUST** be associated with an open RStream. In this way,
+XStreams can be routed according to their RStreams by intermediaries and
+servers. XStream **MUST NOT** be associated with any other XStream, or any
+closed RStream. Otherwise, it cannot be routed properly.
 
 ## Bidirectional Communication
 
 With RStreams and XStreams, HTTP/2 can be used for bidirectional messaging
-communication. As shown in the follow diagrams, after an RStream is open from
-client to server, either endpoint can initiate an XStreams to its peer.
+communication. As shown in the follow diagrams, as long as an RStream is open
+from client to server, either endpoint can initiate an XStreams to its peer.
 
 ~~~
 +--------+   RStream (5)   +---------+    RStream (1)   +--------+
@@ -131,8 +131,7 @@ client to server, either endpoint can initiate an XStreams to its peer.
     |    XStream(7, RS=5)    |     |    XStream(3, RS=1)    |
     +------------------------+     +------------------------+
 ~~~
-{: #fig-client-to-server title="Client initiates the XStream to server, after 
-an RStream is open."}
+{: #fig-client-to-server title="Client initiates an XStream to server."}
 
 ~~~
 +--------+   RStream (5)   +---------+    RStream (1)   +--------+
@@ -142,37 +141,60 @@ an RStream is open."}
      |    XStream(4, RS=5)    |     |    XStream(2, RS=1)    |
      +------------------------+     +------------------------+
 ~~~
-{: #fig-server-to-client title="Server initiates an XStream to client, after 
-an RStream is open."}
+{: #fig-server-to-client title="Server initiates an XStream to client."}
 
-Beyond that, a client can multiplex RStreams, XStreams and regular HTTP/2
-streams into one single HTTP/2 connection. This enables clients to access
-different services without initiating new transport layer connections. This
-saves the latency of setting up new connections. This is more desirable for
-mobile devices because they usually have longer latency network connectivity and
-tighten battery constraints. Multiplexing these services also allows them to
-share a single transport connection congestion control context. It could open
-new optimization opportunities, like prioritizing interactive streams over
-static content fetching streams.
+## XStream Grouping
 
+A client can multiplex RStreams, XStreams and regular HTTP/2 streams into one
+single HTTP/2 connection. Beyond that, all the XStreams associated with the same
+RStream form a logical stream group, and are routed to the same endpoint. This
+enables clients to access different services without initiating new connections.
 As shown in the following diagram, the client can exchange data with PubSub, RPC
 and CDN three different services within one HTTP/2 connection.
 
 ~~~
 +--------+   RStream (5)   +---------+    RStream (1)   +----------+
-| client |>--------------->|  proxy  |>---------------->|  PUBSUB  |
-+--------+                 +---------+                  +----------+
+| client |>--------------->|  proxy  |>---------------->|  PubSub  |
++--------+   XStream (7)   +---------+    XStream (3)   +----------+
   v   v                     ^ ^  v  v
-  |   |     RStream (7)    /  |  |   \    RStream (5)   +----------+
+  |   |     RStream (11)    /  |  |  \    RStream (5)   +----------+
   |   +-------------------+   |  |    +---------------->|    RPC   |
-  |                           |  |                      +----------+
+  |         XStream (13)      |  |        XStream (7)   +----------+
   |                           |  |
-  |         Stream (9)        |  |      Stream (7)      +----------+
+  |         Stream (21)       |  |      Stream (9)      +----------+
   +---------------------------+  +--------------------->|    CDN   |
                                                         +----------+
 ~~~
-{: #fig-multiplex title="Client opens multiple RStreams and an HTTP/2 stream 
-within one HTTP/2 connection."}
+{: #fig-multiplex title="Client opens multiple RStreams, XStreams and an 
+HTTP/2 stream within one HTTP/2 connection."}
+
+Reusing one connection for different purposes saves the latency of setting up
+new connections. This is desirable for mobile devices since they usually have
+higher latency network connectivity and tighten battery constraints.
+Multiplexing these services also allows them to share a single transport
+connection congestion control context. It could open new optimization
+opportunities, like prioritizing interactive streams over static content
+fetching streams. Also, it reduces the number of connections on intermediaries
+and servers.
+
+## Recommended Usage
+RStreams and XStreams are designed for different purposes. To get the more
+benefit from this extension, RStreams are recommended for exchanging metadata
+only, and **SHOULD** be kept long lived. Because once RStream is closed, the
+routing information is gone. No XStream can be exchanged before RStream is
+re-established. To maintain RStreams active, clients and servers should not send
+out END_STREAM flag, and refresh the timeouts on RStreams if a new XStream is
+exchanged. 
+
+By contrast, XStreams are **RECOMMENDED** for exchanging user data, and
+**SHOULD** be kept short lived. In long polling, WebSocket and tunneling
+solutions, streams have to be kept long live because servers need those streams
+for sending back updates in a future time. With this extension, servers are able
+to initiate new XStreams as long as RStreams are still open.  Keeping many
+XStreams alive for a long time is unnecessary, and costs system resources on
+intermediaries and server. Morever, short lived XStreams make connection
+graceful shutdown easier on intermediaries and servers. After exchanging GOAWAY
+frames, open XStreams can be drained within a short time.
 
 ## States of RStream and XStream
 
@@ -283,7 +305,7 @@ frames.
                                        :path = /login
                                        host = example.org
 
-  {binary data .... }         ==>   DATA
+  {binary data .... }        ==>    DATA
                                      - END_STREAM
                                        {binary data ... }
 ~~~
@@ -296,7 +318,7 @@ RStream"}
                                      + END_HEADERS
                                        :status = 200
 
-  {binary data .... }        ==>    DATA
+  {binary data .... }       ==>     DATA
                                      - END_STREAM
                                        {binary data...}
 ~~~
