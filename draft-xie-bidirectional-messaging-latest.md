@@ -157,10 +157,12 @@ and CDN three different services within one HTTP/2 connection.
 | client |>--------------->|  proxy  |>---------------->|  PubSub  |
 +--------+   XStream (7)   +---------+    XStream (3)   +----------+
   v   v                     ^ ^  v  v
-  |   |     RStream (11)    /  |  |  \    RStream (5)   +----------+
-  |   +-------------------+   |  |    +---------------->|    RPC   |
-  |         XStream (13)      |  |        XStream (7)   +----------+
+  |   |                    |  |  |  |
+  |   |     RStream (11)   |  |  |  |    RStream (5)    +----------+
+  |   +--------------------+  |  |  +------------------>|    RPC   |
+  |         XStream (13)      |  |       XStream (7)    +----------+
   |                           |  |
+  |                           |  |  
   |         Stream (21)       |  |      Stream (9)      +----------+
   +---------------------------+  +--------------------->|    CDN   |
                                                         +----------+
@@ -184,7 +186,7 @@ only, and **SHOULD** be kept long lived. Because once RStream is closed, the
 routing information is gone. No XStream can be exchanged before RStream is
 re-established. To maintain RStreams active, clients and servers should not send
 out END_STREAM flag, and refresh the timeouts on RStreams if a new XStream is
-exchanged. 
+exchanged.
 
 By contrast, XStreams are **RECOMMENDED** for exchanging user data, and
 **SHOULD** be kept short lived. In long polling, WebSocket and tunneling
@@ -250,9 +252,16 @@ XHEADER_NOT_ENABLED_ERROR.
 
 ## Interact with Standard HTTP/2 Features
 
-The extension implementation **SHOULD** apply stream and connection level flow
-control, maximum concurrent streams limit, GOAWAY logic to both RStreams and
-XStreams.
+XStreams are extended HTTP/2 streams, thus all the standard HTTP/2 features for
+streams still apply to XStreams. For example, like streams, XStreams are counted
+against the concurrent stream limit, defined in {{!RFC7540}}, Section 5.1.2. The
+connection level and stream level flow control principles are still valid for
+XStreams. However, for the stream priority and dependencies, XStreams have one
+extra constraint: a XStream can have a dependency on its RStream itself, or any
+XStream sharing with the same RStream. Prioritizing the XStreams across
+different RStream groups does not make sense, because they belong to different
+services.
+
 
 # HTTP/2 XHEADERS Frame
 
