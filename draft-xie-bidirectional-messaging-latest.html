@@ -287,9 +287,11 @@ ul.toc li {
 <link href="#rfc.section.3" rel="Chapter" title="3 Solution Overview">
 <link href="#rfc.section.3.1" rel="Chapter" title="3.1 RStream and XStream">
 <link href="#rfc.section.3.2" rel="Chapter" title="3.2 Bidirectional Communication">
-<link href="#rfc.section.3.3" rel="Chapter" title="3.3 States of RStream and XStream">
-<link href="#rfc.section.3.4" rel="Chapter" title="3.4 Negotiate the Extension Through SETTINGS Frame">
-<link href="#rfc.section.3.5" rel="Chapter" title="3.5 Interact with Standard HTTP/2 Features">
+<link href="#rfc.section.3.3" rel="Chapter" title="3.3 XStream Grouping">
+<link href="#rfc.section.3.4" rel="Chapter" title="3.4 Recommended Usage">
+<link href="#rfc.section.3.5" rel="Chapter" title="3.5 States of RStream and XStream">
+<link href="#rfc.section.3.6" rel="Chapter" title="3.6 Negotiate the Extension Through SETTINGS Frame">
+<link href="#rfc.section.3.7" rel="Chapter" title="3.7 Interact with Standard HTTP/2 Features">
 <link href="#rfc.section.4" rel="Chapter" title="4 HTTP/2 XHEADERS Frame">
 <link href="#rfc.section.4.1" rel="Chapter" title="4.1 Definition">
 <link href="#rfc.section.4.2" rel="Chapter" title="4.2 Examples">
@@ -306,9 +308,9 @@ ul.toc li {
 
   <meta name="dct.creator" content="Xie, G. and A. Frindell" />
   <meta name="dct.identifier" content="urn:ietf:id:draft-xie-bidirectional-messaging-latest" />
-  <meta name="dct.issued" scheme="ISO8601" content="2019-06-28" />
-  <meta name="dct.abstract" content=".# Abstract This draft proposes an http2 protocol extension, which enables bidirectional messaging communication between client and server." />
-  <meta name="description" content=".# Abstract This draft proposes an http2 protocol extension, which enables bidirectional messaging communication between client and server." />
+  <meta name="dct.issued" scheme="ISO8601" content="2019-07-02" />
+  <meta name="dct.abstract" content="This draft proposes an http2 protocol extension, which enables bidirectional messaging communication between client and server." />
+  <meta name="description" content="This draft proposes an http2 protocol extension, which enables bidirectional messaging communication between client and server." />
 
 </head>
 
@@ -326,12 +328,12 @@ ul.toc li {
 <td class="right">A. Frindell</td>
 </tr>
 <tr>
-<td class="left">Expires: December 30, 2019</td>
+<td class="left">Expires: January 3, 2020</td>
 <td class="right">Facebook Inc.</td>
 </tr>
 <tr>
 <td class="left"></td>
-<td class="right">June 28, 2019</td>
+<td class="right">July 02, 2019</td>
 </tr>
 
     	
@@ -342,12 +344,12 @@ ul.toc li {
   <span class="filename">draft-xie-bidirectional-messaging-latest</span></p>
   
   <h1 id="rfc.abstract"><a href="#rfc.abstract">Abstract</a></h1>
-<p>.# Abstract This draft proposes an http2 protocol extension, which enables bidirectional messaging communication between client and server.</p>
+<p>This draft proposes an http2 protocol extension, which enables bidirectional messaging communication between client and server.</p>
 <h1 id="rfc.status"><a href="#rfc.status">Status of This Memo</a></h1>
 <p>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</p>
 <p>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF).  Note that other groups may also distribute working documents as Internet-Drafts.  The list of current Internet-Drafts is at https://datatracker.ietf.org/drafts/current/.</p>
 <p>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time.  It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."</p>
-<p>This Internet-Draft will expire on December 30, 2019.</p>
+<p>This Internet-Draft will expire on January 3, 2020.</p>
 <h1 id="rfc.copyrightnotice"><a href="#rfc.copyrightnotice">Copyright Notice</a></h1>
 <p>Copyright (c) 2019 IETF Trust and the persons identified as the document authors.  All rights reserved.</p>
 <p>This document is subject to BCP 78 and the IETF Trust's Legal Provisions Relating to IETF Documents (https://trustee.ietf.org/license-info) in effect on the date of publication of this document.  Please review these documents carefully, as they describe your rights and restrictions with respect to this document.  Code Components extracted from this document must include Simplified BSD License text as described in Section 4.e of the Trust Legal Provisions and are provided without warranty as described in the Simplified BSD License.</p>
@@ -355,7 +357,7 @@ ul.toc li {
 <a href="#rfc.section.1">1.</a> <a href="#introduction" id="introduction">Introduction</a>
 </h1>
 <p id="rfc.section.1.p.1">HTTP/2 is the de facto application protocol in Internet. The optimizations developed in HTTP/2, like stream multiplexing, header compression, efficient binary message framing, and graceful shutdown of open streams, are very generic.  They can be useful in non web browsing applications, for example, Publish/Subscribe, RPC. However, the unidirectional from client to server communication pattern limits HTTP/2 from wider use in these applications. This draft proposes an HTTP/2 protocol extension, which enables bidirectional communication between client and server.</p>
-<p id="rfc.section.1.p.2">So far, the only mechanism HTTP/2 provides for server to client communication is server push. That is, servers can initiate unidirectional push promised streams to clients, but clients cannot respond to them, except accept or discard them silently. While this satisfies some use-cases, its unidirectional property limits HTTP/2 for wider use, for example, send messages and notifications from servers to clients at the time they are available.</p>
+<p id="rfc.section.1.p.2">So far, the only mechanism HTTP/2 provides for server to client communication is server push. That is, servers can initiate unidirectional push promised streams to clients, but clients cannot respond to them, except accepting or discarding them silently. More interesting, the intermediaries may have different server push policies, and may not forward to downstream at all. The best effort mechanism is not reliable to deliver content from servers to clients. While this satisfies some use-cases, its unidirectional property limits HTTP/2 for wider use, for example, send messages and notifications from servers to clients at the time they are available.</p>
 <p id="rfc.section.1.p.3">To work around this limitation, many techniques are developed, like long polling <a href="#RFC6202" class="xref">[RFC6202]</a>, WebSocket <a href="#RFC8441" class="xref">[RFC8441]</a>, and tunneling. They are common at: layering application protocol on top of HTTP/2 and using HTTP/2 streams as transport connections. These solutions more or less defeat the optimizations provided by HTTP/2. For example, first, if multiplexing multiple parallel interactions into one HTTP/2 stream, the head of line block will be re-introduced. Second, application meta data is encapsulated into DATA frame, rather than HEADERS frame, so header compression is impossible. Third, user data are framed more than once at different protocol layers, which offsets the wire efficiency from HTTP/2 binary frame. Take WebSocket over HTTP/2 as an example, user data is framed at application protocol, WebSocket, and HTTP/2 layers. This not only introduces the byte overhead on the wire, but also complicates the data processing. These techniques also pose new operational challenges to intermediaries. Due to the traffic from the whole user session is encapsulated into one HTTP/2 stream, this stream can last very long time. Intermediaries may take long time to drain these streams. As a remind, GOAWAY can only signals the remote endpoint to stop using the connection for new streams and does not help the open streams. Moreover, intermediaries have no visibility to user interactions, and lose the capability to collect telemetry metrics (e.g., time to the first/last byte of request and response) for services.</p>
 <p id="rfc.section.1.p.4">In this draft, a new HTTP/2 frame is introduced which has the routing properties of PUSH_PROMISE frame and the bi-directionality of HEADERS frame. The extension provides several benefits: 1) after a HTTP/2 connection setup, a server can initiate streams to the client anytime, and the client can respond to the incoming streams accordingly. That is, the communication over HTTP/2 is bidirectional and symmetric. 2) All the HTTP/2 optimizations still apply.  Intermediaries also have all the necessary meta data to accomplish their goals.  3) Further, clients are able to group streams together for routing purposes, such that each individual stream group can be used for a different service, within the same HTTP/2 connections.</p>
 <h1 id="rfc.section.2">
@@ -369,13 +371,12 @@ ul.toc li {
 <h1 id="rfc.section.3.1">
 <a href="#rfc.section.3.1">3.1.</a> <a href="#rstream-and-xstream" id="rstream-and-xstream">RStream and XStream</a>
 </h1>
-<p id="rfc.section.3.1.p.1">A routing stream (RStream) is a long lived HTTP/2 stream in nature. RStreams are initiated by clients, and can be routed independently by any intermediaries.  Though an RStream is effectively a regular HTTP/2 stream, RStreams are recommended for exchanging metadata, but not user data.</p>
-<p id="rfc.section.3.1.p.2">A new HTTP/2 stream called XStream is introduced for exchanging user data.  XStreams are <strong>RECOMMENDED</strong> for short lived transactions, so intermediaries and servers can gracefully shutdown XStreams within a short time. The typical use case can be a subscription or publish request/response in Publish/Subscribe use case, or an RPC call between two endpoints.</p>
-<p id="rfc.section.3.1.p.3">An XStream is opened by an XHEADERS frame, and continued by CONTINUATION and DATA frames. An XStream <strong>MUST</strong> be associated with an open RStream, and <strong>MUST NOT</strong> be associated with any other XStream. XStreams are routed according to their RStreams by intermediaries and servers. Effectively, all XStreams with the same RStream form a logical stream group, and are routed to the same endpoint.</p>
+<p id="rfc.section.3.1.p.1">A routing stream (RStream) is a regular HTTP/2 stream in nature. It is opened by a HEADERS frame, and <strong>MAY</strong> be continued by CONTINUATION and DATA frames.  RStreams are initiated by clients to servers, and can be independently routed by intermediaries on the network path. The main purpose for RStream is to facilitate XStreams&#8217; intermediary traversal.</p>
+<p id="rfc.section.3.1.p.2">A new HTTP/2 stream called eXtended stream (XStream) is introduced for exchanging user data bidirectionally. An XStream is opened by an XHEADERS frame, and <strong>MAY</strong> be continued by CONTINUATION and DATA frames. XStreams can be initiated by either clients or servers. Another difference from a regular stream, an XStream <strong>MUST</strong> be associated with an open RStream. In this way, XStreams can be routed according to their RStreams by intermediaries and servers. XStream <strong>MUST NOT</strong> be associated with any other XStream, or any closed RStream. Otherwise, it cannot be routed properly.</p>
 <h1 id="rfc.section.3.2">
 <a href="#rfc.section.3.2">3.2.</a> <a href="#bidirectional-communication" id="bidirectional-communication">Bidirectional Communication</a>
 </h1>
-<p id="rfc.section.3.2.p.1">With RStreams and XStreams, HTTP/2 can be used for bidirectional messaging communication. As shown in the follow diagrams, after an RStream is open from client to server, either endpoint can initiate an XStreams to its peer.</p>
+<p id="rfc.section.3.2.p.1">With RStreams and XStreams, HTTP/2 can be used for bidirectional messaging communication. As shown in the follow diagrams, as long as an RStream is open from client to server, either endpoint can initiate an XStreams to its peer.</p>
 <div id="rfc.figure.1"></div>
 <div id="fig-client-to-server"></div>
 <pre>
@@ -386,7 +387,7 @@ ul.toc li {
     |    XStream(7, RS=5)    |     |    XStream(3, RS=1)    |
     +------------------------+     +------------------------+
 </pre>
-<p class="figure">Figure 1: Client initiates the XStream to server, after  an RStream is open.</p>
+<p class="figure">Figure 1: Client initiates an XStream to server.</p>
 <div id="rfc.figure.2"></div>
 <div id="fig-server-to-client"></div>
 <pre>
@@ -397,44 +398,54 @@ ul.toc li {
      |    XStream(4, RS=5)    |     |    XStream(2, RS=1)    |
      +------------------------+     +------------------------+
 </pre>
-<p class="figure">Figure 2: Server initiates an XStream to client, after  an RStream is open.</p>
-<p id="rfc.section.3.2.p.2">Beyond that, a client can multiplex RStreams, XStreams and regular HTTP/2 streams into one single HTTP/2 connection. This enables clients to access different services without initiating new transport layer connections. This saves the latency of setting up new connections. This is more desirable for mobile devices because they usually have longer latency network connectivity and tighten battery constraints. Multiplexing these services also allows them to share a single transport connection congestion control context. It could open new optimization opportunities, like prioritizing interactive streams over static content fetching streams.</p>
-<p id="rfc.section.3.2.p.3">As shown in the following diagram, the client can exchange data with PubSub, RPC and CDN three different services within one HTTP/2 connection.</p>
+<p class="figure">Figure 2: Server initiates an XStream to client.</p>
+<h1 id="rfc.section.3.3">
+<a href="#rfc.section.3.3">3.3.</a> <a href="#xstream-grouping" id="xstream-grouping">XStream Grouping</a>
+</h1>
+<p id="rfc.section.3.3.p.1">A client can multiplex RStreams, XStreams and regular HTTP/2 streams into one single HTTP/2 connection. Beyond that, all the XStreams associated with the same RStream form a logical stream group, and are routed to the same endpoint. This enables clients to access different services without initiating new connections.  As shown in the following diagram, the client can exchange data with PubSub, RPC and CDN three different services within one HTTP/2 connection.</p>
 <div id="rfc.figure.3"></div>
 <div id="fig-multiplex"></div>
 <pre>
 +--------+   RStream (5)   +---------+    RStream (1)   +----------+
-| client |&gt;---------------&gt;|  proxy  |&gt;----------------&gt;|  PUBSUB  |
-+--------+                 +---------+                  +----------+
+| client |&gt;---------------&gt;|  proxy  |&gt;----------------&gt;|  PubSub  |
++--------+   XStream (7)   +---------+    XStream (3)   +----------+
   v   v                     ^ ^  v  v
-  |   |     RStream (7)    /  |  |   \    RStream (5)   +----------+
-  |   +-------------------+   |  |    +----------------&gt;|    RPC   |
-  |                           |  |                      +----------+
+  |   |                    |  |  |  |
+  |   |     RStream (11)   |  |  |  |    RStream (5)    +----------+
+  |   +--------------------+  |  |  +------------------&gt;|    RPC   |
+  |         XStream (13)      |  |       XStream (7)    +----------+
   |                           |  |
-  |         Stream (9)        |  |      Stream (7)      +----------+
+  |                           |  |  
+  |         Stream (21)       |  |      Stream (9)      +----------+
   +---------------------------+  +---------------------&gt;|    CDN   |
                                                         +----------+
 </pre>
-<p class="figure">Figure 3: Client opens multiple RStreams and an HTTP/2 stream  within one HTTP/2 connection.</p>
-<h1 id="rfc.section.3.3">
-<a href="#rfc.section.3.3">3.3.</a> <a href="#states-of-rstream-and-xstream" id="states-of-rstream-and-xstream">States of RStream and XStream</a>
-</h1>
-<p id="rfc.section.3.3.p.1">RStreams are regular HTTP/2 streams that follow the stream lifecycle in <a href="#RFC7540" class="xref">[RFC7540]</a>, section 5.1. XStreams use the same lifecycle as regular HTTP/2 streams, but have extra dependence on their RStreams. If an RStream is reset, endpoints <strong>MUST</strong> reset the XStreams associated with that RStream. If the RStream is closed, endpoints <strong>SHOULD</strong> allow the existing XStreams to complete normally. The RStream <strong>SHOULD</strong> remain open while communication is ongoing.  Endpoints <strong>SHOULD</strong> refresh any timeout on the RStream while its associated XStreams are open.</p>
-<p id="rfc.section.3.3.p.2">A sender <strong>MUST NOT</strong> initiate new XStreams if on an RStream that is in the open or half closed (remote) state.</p>
-<p id="rfc.section.3.3.p.3">Endpoints process new XStreams only when the RStream is open or half closed (local) state. If an endpoint receives an XHEADERS frame specifying an RStream in the closed or haf closed (remote) state, it <strong>MUST</strong> respond with a connection error of type ROUTING_STREAM_ERROR.</p>
+<p class="figure">Figure 3: Client opens multiple RStreams, XStreams and an  HTTP/2 stream within one HTTP/2 connection.</p>
+<p id="rfc.section.3.3.p.2">Reusing one connection for different purposes saves the latency of setting up new connections. This is desirable for mobile devices since they usually have higher latency network connectivity and tighten battery constraints.  Multiplexing these services also allows them to share a single transport connection congestion control context. It could open new optimization opportunities, like prioritizing interactive streams over static content fetching streams. Also, it reduces the number of connections on intermediaries and servers.</p>
 <h1 id="rfc.section.3.4">
-<a href="#rfc.section.3.4">3.4.</a> <a href="#negotiate-the-extension-through-settings-frame" id="negotiate-the-extension-through-settings-frame">Negotiate the Extension Through SETTINGS Frame</a>
+<a href="#rfc.section.3.4">3.4.</a> <a href="#recommended-usage" id="recommended-usage">Recommended Usage</a>
 </h1>
-<p id="rfc.section.3.4.p.1">The extension <strong>SHOULD</strong> be disabled by default. As suggested in <a href="#RFC7540" class="xref">[RFC7540]</a>, section 5.5, the unknown ENABLE_XHEADERS setting and XHEADERS frame <strong>MUST</strong> be ignored by HTTP/2 compliant implementations, which have supported this extension yet.</p>
-<p id="rfc.section.3.4.p.2">Endpoints can negotiate the use of the extension through the SETTINGS frame. If an implementation supports the extension, it is <strong>RECOMMENDED</strong> to include the ENABLE_XHEADERS setting in the initial SETTINGS frame, such that the remote endpoint can disover the support at the earliest time. Once enabled, this extension <strong>MUST NOT</strong> be disabled over the lifetime of the connection.</p>
-<p id="rfc.section.3.4.p.3">An endpoint can send XHEADERS frames immediately upon receiving a SETTINGS frame with ENABLE_XHEADERS=1.</p>
-<p id="rfc.section.3.4.p.4">An endpoint <strong>MUST NOT</strong> send out XHEADERS before receiving a SETTINGS frame with the ENABLE_XHEADERS=1. If a remote endpoint does not support this extension yet, the XHEADERS will be ignored, making the header compression contexts inconsistent between sender and receiver.</p>
-<p id="rfc.section.3.4.p.5">If an endpoint supports this extension, but receives XHEADERS frames before ENABLE_XHEADERS, it is <strong>RECOMMENDED</strong> to respond with a connection error XHEADER_NOT_ENABLED_ERROR. This helps the remote endpoint to implement this extension properly.</p>
-<p id="rfc.section.3.4.p.6">Intermediaries <strong>SHOULD</strong> send the ENABLE_XHEADERS setting to clients, only if intermediaries and their upstream servers can support this extension. If an intermediary receives an XStream but discovers the destination endpoint does not support the extension, it <strong>MUST</strong> reset the stream with XHEADER_NOT_ENABLED_ERROR.</p>
+<p id="rfc.section.3.4.p.1">RStreams and XStreams are designed for different purposes. To get the more benefit from this extension, RStreams are recommended for exchanging metadata only, and <strong>SHOULD</strong> be kept long lived. Because once RStream is closed, the routing information is gone. No XStream can be exchanged before RStream is re-established. To maintain RStreams active, clients and servers should not send out END_STREAM flag, and refresh the timeouts on RStreams if a new XStream is exchanged.</p>
+<p id="rfc.section.3.4.p.2">By contrast, XStreams are <strong>RECOMMENDED</strong> for exchanging user data, and <strong>SHOULD</strong> be kept short lived. In long polling, WebSocket and tunneling solutions, streams have to be kept long live because servers need those streams for sending back updates in a future time. With this extension, servers are able to initiate new XStreams as long as RStreams are still open.  Keeping many XStreams alive for a long time is unnecessary, and costs system resources on intermediaries and server. Morever, short lived XStreams make connection graceful shutdown easier on intermediaries and servers. After exchanging GOAWAY frames, open XStreams can be drained within a short time.</p>
 <h1 id="rfc.section.3.5">
-<a href="#rfc.section.3.5">3.5.</a> <a href="#interact-with-standard-http2-features" id="interact-with-standard-http2-features">Interact with Standard HTTP/2 Features</a>
+<a href="#rfc.section.3.5">3.5.</a> <a href="#states-of-rstream-and-xstream" id="states-of-rstream-and-xstream">States of RStream and XStream</a>
 </h1>
-<p id="rfc.section.3.5.p.1">The extension implementation <strong>SHOULD</strong> apply stream and connection level flow control, maximum concurrent streams limit, GOAWAY logic to both RStreams and XStreams.</p>
+<p id="rfc.section.3.5.p.1">RStreams are regular HTTP/2 streams that follow the stream lifecycle in <a href="#RFC7540" class="xref">[RFC7540]</a>, section 5.1. XStreams use the same lifecycle as regular HTTP/2 streams, but have extra dependence on their RStreams. If an RStream is reset, endpoints <strong>MUST</strong> reset the XStreams associated with that RStream. If the RStream is closed, endpoints <strong>SHOULD</strong> allow the existing XStreams to complete normally. The RStream <strong>SHOULD</strong> remain open while communication is ongoing.  Endpoints <strong>SHOULD</strong> refresh any timeout on the RStream while its associated XStreams are open.</p>
+<p id="rfc.section.3.5.p.2">A sender <strong>MUST NOT</strong> initiate new XStreams if on an RStream that is in the open or half closed (remote) state.</p>
+<p id="rfc.section.3.5.p.3">Endpoints process new XStreams only when the RStream is open or half closed (local) state. If an endpoint receives an XHEADERS frame specifying an RStream in the closed or haf closed (remote) state, it <strong>MUST</strong> respond with a connection error of type ROUTING_STREAM_ERROR.</p>
+<h1 id="rfc.section.3.6">
+<a href="#rfc.section.3.6">3.6.</a> <a href="#negotiate-the-extension-through-settings-frame" id="negotiate-the-extension-through-settings-frame">Negotiate the Extension Through SETTINGS Frame</a>
+</h1>
+<p id="rfc.section.3.6.p.1">The extension <strong>SHOULD</strong> be disabled by default. As suggested in <a href="#RFC7540" class="xref">[RFC7540]</a>, section 5.5, the unknown ENABLE_XHEADERS setting and XHEADERS frame <strong>MUST</strong> be ignored by HTTP/2 compliant implementations, which have supported this extension yet.</p>
+<p id="rfc.section.3.6.p.2">Endpoints can negotiate the use of the extension through the SETTINGS frame. If an implementation supports the extension, it is <strong>RECOMMENDED</strong> to include the ENABLE_XHEADERS setting in the initial SETTINGS frame, such that the remote endpoint can disover the support at the earliest time. Once enabled, this extension <strong>MUST NOT</strong> be disabled over the lifetime of the connection.</p>
+<p id="rfc.section.3.6.p.3">An endpoint can send XHEADERS frames immediately upon receiving a SETTINGS frame with ENABLE_XHEADERS=1.</p>
+<p id="rfc.section.3.6.p.4">An endpoint <strong>MUST NOT</strong> send out XHEADERS before receiving a SETTINGS frame with the ENABLE_XHEADERS=1. If a remote endpoint does not support this extension yet, the XHEADERS will be ignored, making the header compression contexts inconsistent between sender and receiver.</p>
+<p id="rfc.section.3.6.p.5">If an endpoint supports this extension, but receives XHEADERS frames before ENABLE_XHEADERS, it is <strong>RECOMMENDED</strong> to respond with a connection error XHEADER_NOT_ENABLED_ERROR. This helps the remote endpoint to implement this extension properly.</p>
+<p id="rfc.section.3.6.p.6">Intermediaries <strong>SHOULD</strong> send the ENABLE_XHEADERS setting to clients, only if intermediaries and their upstream servers can support this extension. If an intermediary receives an XStream but discovers the destination endpoint does not support the extension, it <strong>MUST</strong> reset the stream with XHEADER_NOT_ENABLED_ERROR.</p>
+<h1 id="rfc.section.3.7">
+<a href="#rfc.section.3.7">3.7.</a> <a href="#interact-with-standard-http2-features" id="interact-with-standard-http2-features">Interact with Standard HTTP/2 Features</a>
+</h1>
+<p id="rfc.section.3.7.p.1">XStreams are extended HTTP/2 streams, thus all the standard HTTP/2 features for streams still apply to XStreams. For example, like streams, XStreams are counted against the concurrent stream limit, defined in <a href="#RFC7540" class="xref">[RFC7540]</a>, Section 5.1.2. The connection level and stream level flow control principles are still valid for XStreams. However, for the stream priority and dependencies, XStreams have one extra constraint: a XStream can have a dependency on its RStream itself, or any XStream sharing with the same RStream. Prioritizing the XStreams across different RStream groups does not make sense, because they belong to different services.</p>
 <h1 id="rfc.section.4">
 <a href="#rfc.section.4">4.</a> <a href="#http2-xheaders-frame" id="http2-xheaders-frame">HTTP/2 XHEADERS Frame</a>
 </h1>
@@ -477,7 +488,7 @@ ul.toc li {
                                        :path = /login
                                        host = example.org
 
-  {binary data .... }         ==&gt;   DATA
+  {binary data .... }        ==&gt;    DATA
                                      - END_STREAM
                                        {binary data ... }
 </pre>
@@ -490,7 +501,7 @@ ul.toc li {
                                      + END_HEADERS
                                        :status = 200
 
-  {binary data .... }        ==&gt;    DATA
+  {binary data .... }       ==&gt;     DATA
                                      - END_STREAM
                                        {binary data...}
 </pre>
@@ -645,11 +656,15 @@ ul.toc li {
 </li>
 <li>3.2.   <a href="#rfc.section.3.2">Bidirectional Communication</a>
 </li>
-<li>3.3.   <a href="#rfc.section.3.3">States of RStream and XStream</a>
+<li>3.3.   <a href="#rfc.section.3.3">XStream Grouping</a>
 </li>
-<li>3.4.   <a href="#rfc.section.3.4">Negotiate the Extension Through SETTINGS Frame</a>
+<li>3.4.   <a href="#rfc.section.3.4">Recommended Usage</a>
 </li>
-<li>3.5.   <a href="#rfc.section.3.5">Interact with Standard HTTP/2 Features</a>
+<li>3.5.   <a href="#rfc.section.3.5">States of RStream and XStream</a>
+</li>
+<li>3.6.   <a href="#rfc.section.3.6">Negotiate the Extension Through SETTINGS Frame</a>
+</li>
+<li>3.7.   <a href="#rfc.section.3.7">Interact with Standard HTTP/2 Features</a>
 </li>
 </ul><li>4.   <a href="#rfc.section.4">HTTP/2 XHEADERS Frame</a>
 </li>

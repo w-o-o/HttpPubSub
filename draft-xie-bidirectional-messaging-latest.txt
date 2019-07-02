@@ -4,8 +4,8 @@
 
 httpbis Working Group                                             G. Xie
 Internet-Draft                                               A. Frindell
-Expires: December 30, 2019                                 Facebook Inc.
-                                                           June 28, 2019
+Expires: January 3, 2020                                   Facebook Inc.
+                                                           July 02, 2019
 
 
       An HTTP/2 Extension for bidirectional message communication
@@ -13,9 +13,8 @@ Expires: December 30, 2019                                 Facebook Inc.
 
 Abstract
 
-   .# Abstract This draft proposes an http2 protocol extension, which
-   enables bidirectional messaging communication between client and
-   server.
+   This draft proposes an http2 protocol extension, which enables
+   bidirectional messaging communication between client and server.
 
 Status of This Memo
 
@@ -32,7 +31,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on December 30, 2019.
+   This Internet-Draft will expire on January 3, 2020.
 
 Copyright Notice
 
@@ -53,9 +52,10 @@ Copyright Notice
 
 
 
-Xie & Frindell          Expires December 30, 2019               [Page 1]
+
+Xie & Frindell           Expires January 3, 2020                [Page 1]
 
-Internet-Draft                 HTTP-PUBSUB                     June 2019
+Internet-Draft                 HTTP-PUBSUB                     July 2019
 
 
 1.  Introduction
@@ -73,10 +73,13 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
    So far, the only mechanism HTTP/2 provides for server to client
    communication is server push.  That is, servers can initiate
    unidirectional push promised streams to clients, but clients cannot
-   respond to them, except accept or discard them silently.  While this
-   satisfies some use-cases, its unidirectional property limits HTTP/2
-   for wider use, for example, send messages and notifications from
-   servers to clients at the time they are available.
+   respond to them, except accepting or discarding them silently.  More
+   interesting, the intermediaries may have different server push
+   policies, and may not forward to downstream at all.  The best effort
+   mechanism is not reliable to deliver content from servers to clients.
+   While this satisfies some use-cases, its unidirectional property
+   limits HTTP/2 for wider use, for example, send messages and
+   notifications from servers to clients at the time they are available.
 
    To work around this limitation, many techniques are developed, like
    long polling [RFC6202], WebSocket [RFC8441], and tunneling.  They are
@@ -102,18 +105,19 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
    lose the capability to collect telemetry metrics (e.g., time to the
    first/last byte of request and response) for services.
 
+
+
+
+
+Xie & Frindell           Expires January 3, 2020                [Page 2]
+
+Internet-Draft                 HTTP-PUBSUB                     July 2019
+
+
    In this draft, a new HTTP/2 frame is introduced which has the routing
    properties of PUSH_PROMISE frame and the bi-directionality of HEADERS
    frame.  The extension provides several benefits: 1) after a HTTP/2
    connection setup, a server can initiate streams to the client
-
-
-
-Xie & Frindell          Expires December 30, 2019               [Page 2]
-
-Internet-Draft                 HTTP-PUBSUB                     June 2019
-
-
    anytime, and the client can respond to the incoming streams
    accordingly.  That is, the communication over HTTP/2 is bidirectional
    and symmetric. 2) All the HTTP/2 optimizations still apply.
@@ -136,39 +140,38 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
 
 3.1.  RStream and XStream
 
-   A routing stream (RStream) is a long lived HTTP/2 stream in nature.
-   RStreams are initiated by clients, and can be routed independently by
-   any intermediaries.  Though an RStream is effectively a regular
-   HTTP/2 stream, RStreams are recommended for exchanging metadata, but
-   not user data.
+   A routing stream (RStream) is a regular HTTP/2 stream in nature.  It
+   is opened by a HEADERS frame, and *MAY* be continued by CONTINUATION
+   and DATA frames.  RStreams are initiated by clients to servers, and
+   can be independently routed by intermediaries on the network path.
+   The main purpose for RStream is to facilitate XStreams' intermediary
+   traversal.
 
-   A new HTTP/2 stream called XStream is introduced for exchanging user
-   data.  XStreams are *RECOMMENDED* for short lived transactions, so
-   intermediaries and servers can gracefully shutdown XStreams within a
-   short time.  The typical use case can be a subscription or publish
-   request/response in Publish/Subscribe use case, or an RPC call
-   between two endpoints.
-
-   An XStream is opened by an XHEADERS frame, and continued by
-   CONTINUATION and DATA frames.  An XStream *MUST* be associated with
-   an open RStream, and *MUST NOT* be associated with any other XStream.
-   XStreams are routed according to their RStreams by intermediaries and
-   servers.  Effectively, all XStreams with the same RStream form a
-   logical stream group, and are routed to the same endpoint.
+   A new HTTP/2 stream called eXtended stream (XStream) is introduced
+   for exchanging user data bidirectionally.  An XStream is opened by an
+   XHEADERS frame, and *MAY* be continued by CONTINUATION and DATA
+   frames.  XStreams can be initiated by either clients or servers.
+   Another difference from a regular stream, an XStream *MUST* be
+   associated with an open RStream.  In this way, XStreams can be routed
+   according to their RStreams by intermediaries and servers.  XStream
+   *MUST NOT* be associated with any other XStream, or any closed
+   RStream.  Otherwise, it cannot be routed properly.
 
 3.2.  Bidirectional Communication
 
    With RStreams and XStreams, HTTP/2 can be used for bidirectional
-   messaging communication.  As shown in the follow diagrams, after an
-   RStream is open from client to server, either endpoint can initiate
-   an XStreams to its peer.
+   messaging communication.  As shown in the follow diagrams, as long as
 
 
 
-Xie & Frindell          Expires December 30, 2019               [Page 3]
+
+Xie & Frindell           Expires January 3, 2020                [Page 3]
 
-Internet-Draft                 HTTP-PUBSUB                     June 2019
+Internet-Draft                 HTTP-PUBSUB                     July 2019
 
+
+   an RStream is open from client to server, either endpoint can
+   initiate an XStreams to its peer.
 
    +--------+   RStream (5)   +---------+    RStream (1)   +--------+
    | client |>--------------->|  proxy  |>---------------->| server |
@@ -177,8 +180,7 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
        |    XStream(7, RS=5)    |     |    XStream(3, RS=1)    |
        +------------------------+     +------------------------+
 
-   Figure 1: Client initiates the XStream to server, after an RStream is
-                                   open.
+             Figure 1: Client initiates an XStream to server.
 
    +--------+   RStream (5)   +---------+    RStream (1)   +--------+
    | client |>--------------->|  proxy  |>---------------->| server |
@@ -187,61 +189,77 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
         |    XStream(4, RS=5)    |     |    XStream(2, RS=1)    |
         +------------------------+     +------------------------+
 
-   Figure 2: Server initiates an XStream to client, after an RStream is
-                                   open.
+             Figure 2: Server initiates an XStream to client.
 
-   Beyond that, a client can multiplex RStreams, XStreams and regular
-   HTTP/2 streams into one single HTTP/2 connection.  This enables
-   clients to access different services without initiating new transport
-   layer connections.  This saves the latency of setting up new
-   connections.  This is more desirable for mobile devices because they
-   usually have longer latency network connectivity and tighten battery
-   constraints.  Multiplexing these services also allows them to share a
-   single transport connection congestion control context.  It could
-   open new optimization opportunities, like prioritizing interactive
-   streams over static content fetching streams.
+3.3.  XStream Grouping
 
-   As shown in the following diagram, the client can exchange data with
-   PubSub, RPC and CDN three different services within one HTTP/2
-   connection.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Xie & Frindell          Expires December 30, 2019               [Page 4]
-
-Internet-Draft                 HTTP-PUBSUB                     June 2019
-
+   A client can multiplex RStreams, XStreams and regular HTTP/2 streams
+   into one single HTTP/2 connection.  Beyond that, all the XStreams
+   associated with the same RStream form a logical stream group, and are
+   routed to the same endpoint.  This enables clients to access
+   different services without initiating new connections.  As shown in
+   the following diagram, the client can exchange data with PubSub, RPC
+   and CDN three different services within one HTTP/2 connection.
 
    +--------+   RStream (5)   +---------+    RStream (1)   +----------+
-   | client |>--------------->|  proxy  |>---------------->|  PUBSUB  |
-   +--------+                 +---------+                  +----------+
+   | client |>--------------->|  proxy  |>---------------->|  PubSub  |
+   +--------+   XStream (7)   +---------+    XStream (3)   +----------+
      v   v                     ^ ^  v  v
-     |   |     RStream (7)    /  |  |   \    RStream (5)   +----------+
-     |   +-------------------+   |  |    +---------------->|    RPC   |
-     |                           |  |                      +----------+
+     |   |                    |  |  |  |
+     |   |     RStream (11)   |  |  |  |    RStream (5)    +----------+
+     |   +--------------------+  |  |  +------------------>|    RPC   |
+     |         XStream (13)      |  |       XStream (7)    +----------+
      |                           |  |
-     |         Stream (9)        |  |      Stream (7)      +----------+
+     |                           |  |
+     |         Stream (21)       |  |      Stream (9)      +----------+
      +---------------------------+  +--------------------->|    CDN   |
                                                            +----------+
 
-   Figure 3: Client opens multiple RStreams and an HTTP/2 stream within
-                          one HTTP/2 connection.
+     Figure 3: Client opens multiple RStreams, XStreams and an HTTP/2
+                   stream within one HTTP/2 connection.
 
-3.3.  States of RStream and XStream
+
+
+
+Xie & Frindell           Expires January 3, 2020                [Page 4]
+
+Internet-Draft                 HTTP-PUBSUB                     July 2019
+
+
+   Reusing one connection for different purposes saves the latency of
+   setting up new connections.  This is desirable for mobile devices
+   since they usually have higher latency network connectivity and
+   tighten battery constraints.  Multiplexing these services also allows
+   them to share a single transport connection congestion control
+   context.  It could open new optimization opportunities, like
+   prioritizing interactive streams over static content fetching
+   streams.  Also, it reduces the number of connections on
+   intermediaries and servers.
+
+3.4.  Recommended Usage
+
+   RStreams and XStreams are designed for different purposes.  To get
+   the more benefit from this extension, RStreams are recommended for
+   exchanging metadata only, and *SHOULD* be kept long lived.  Because
+   once RStream is closed, the routing information is gone.  No XStream
+   can be exchanged before RStream is re-established.  To maintain
+   RStreams active, clients and servers should not send out END_STREAM
+   flag, and refresh the timeouts on RStreams if a new XStream is
+   exchanged.
+
+   By contrast, XStreams are *RECOMMENDED* for exchanging user data, and
+   *SHOULD* be kept short lived.  In long polling, WebSocket and
+   tunneling solutions, streams have to be kept long live because
+   servers need those streams for sending back updates in a future time.
+   With this extension, servers are able to initiate new XStreams as
+   long as RStreams are still open.  Keeping many XStreams alive for a
+   long time is unnecessary, and costs system resources on
+   intermediaries and server.  Morever, short lived XStreams make
+   connection graceful shutdown easier on intermediaries and servers.
+   After exchanging GOAWAY frames, open XStreams can be drained within a
+   short time.
+
+3.5.  States of RStream and XStream
 
    RStreams are regular HTTP/2 streams that follow the stream lifecycle
    in [RFC7540], section 5.1.  XStreams use the same lifecycle as
@@ -256,12 +274,20 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
    A sender *MUST NOT* initiate new XStreams if on an RStream that is in
    the open or half closed (remote) state.
 
+
+
+
+Xie & Frindell           Expires January 3, 2020                [Page 5]
+
+Internet-Draft                 HTTP-PUBSUB                     July 2019
+
+
    Endpoints process new XStreams only when the RStream is open or half
    closed (local) state.  If an endpoint receives an XHEADERS frame
    specifying an RStream in the closed or haf closed (remote) state, it
    *MUST* respond with a connection error of type ROUTING_STREAM_ERROR.
 
-3.4.  Negotiate the Extension Through SETTINGS Frame
+3.6.  Negotiate the Extension Through SETTINGS Frame
 
    The extension *SHOULD* be disabled by default.  As suggested in
    [RFC7540], section 5.5, the unknown ENABLE_XHEADERS setting and
@@ -274,13 +300,6 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
    SETTINGS frame, such that the remote endpoint can disover the support
    at the earliest time.  Once enabled, this extension *MUST NOT* be
    disabled over the lifetime of the connection.
-
-
-
-Xie & Frindell          Expires December 30, 2019               [Page 5]
-
-Internet-Draft                 HTTP-PUBSUB                     June 2019
-
 
    An endpoint can send XHEADERS frames immediately upon receiving a
    SETTINGS frame with ENABLE_XHEADERS=1.
@@ -301,11 +320,26 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
    destination endpoint does not support the extension, it *MUST* reset
    the stream with XHEADER_NOT_ENABLED_ERROR.
 
-3.5.  Interact with Standard HTTP/2 Features
+3.7.  Interact with Standard HTTP/2 Features
 
-   The extension implementation *SHOULD* apply stream and connection
-   level flow control, maximum concurrent streams limit, GOAWAY logic to
-   both RStreams and XStreams.
+   XStreams are extended HTTP/2 streams, thus all the standard HTTP/2
+   features for streams still apply to XStreams.  For example, like
+   streams, XStreams are counted against the concurrent stream limit,
+   defined in [RFC7540], Section 5.1.2.  The connection level and stream
+   level flow control principles are still valid for XStreams.  However,
+   for the stream priority and dependencies, XStreams have one extra
+   constraint: a XStream can have a dependency on its RStream itself, or
+   any XStream sharing with the same RStream.  Prioritizing the XStreams
+
+
+
+Xie & Frindell           Expires January 3, 2020                [Page 6]
+
+Internet-Draft                 HTTP-PUBSUB                     July 2019
+
+
+   across different RStream groups does not make sense, because they
+   belong to different services.
 
 4.  HTTP/2 XHEADERS Frame
 
@@ -321,22 +355,6 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
    one XHEADERS frame.
 
 4.1.  Definition
-
-
-
-
-
-
-
-
-
-
-
-
-Xie & Frindell          Expires December 30, 2019               [Page 6]
-
-Internet-Draft                 HTTP-PUBSUB                     June 2019
-
 
     +---------------+
     |Pad Length? (8)|
@@ -367,6 +385,15 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
    transmitted on RStream with regualar HEADERS frames, and on XStream
    with HTTP/2 XHAEDERS frames.
 
+
+
+
+
+Xie & Frindell           Expires January 3, 2020                [Page 7]
+
+Internet-Draft                 HTTP-PUBSUB                     July 2019
+
+
      GET /login HTTP/1.1               HEADERS
      Host: example.org          ==>     - END_STREAM
                                         + END_HEADERS
@@ -375,31 +402,18 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
                                           :path = /login
                                           host = example.org
 
-     {binary data .... }         ==>   DATA
+     {binary data .... }        ==>    DATA
                                         - END_STREAM
                                           {binary data ... }
 
        Figure 5: The request message and HEADERS frame on an RStream
-
-
-
-
-
-
-
-
-
-Xie & Frindell          Expires December 30, 2019               [Page 7]
-
-Internet-Draft                 HTTP-PUBSUB                     June 2019
-
 
      HTTP/1.1 200 OK                   HEADERS
                                ==>      - END_STREAM
                                         + END_HEADERS
                                           :status = 200
 
-     {binary data .... }        ==>    DATA
+     {binary data .... }       ==>     DATA
                                         - END_STREAM
                                           {binary data...}
 
@@ -429,6 +443,13 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
 
       Figure 8: The response message and XHEADERS frame on an XStream
 
+
+
+Xie & Frindell           Expires January 3, 2020                [Page 8]
+
+Internet-Draft                 HTTP-PUBSUB                     July 2019
+
+
 5.  IANA Considerations
 
    This document establishes a registry for a new frame type, setting,
@@ -437,18 +458,6 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
 5.1.  FRAME TYPE Registry
 
    The entry in the following table are registered by this document.
-
-
-
-
-
-
-
-
-Xie & Frindell          Expires December 30, 2019               [Page 8]
-
-Internet-Draft                 HTTP-PUBSUB                     June 2019
-
 
       +---------------+------+--------------+
       | Frame Type    | Code | Section      |
@@ -486,6 +495,17 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/info/rfc2119>.
 
+
+
+
+
+
+
+Xie & Frindell           Expires January 3, 2020                [Page 9]
+
+Internet-Draft                 HTTP-PUBSUB                     July 2019
+
+
    [RFC6202]  Loreto, S., Saint-Andre, P., Salsano, S., and G. Wilkins,
               "Known Issues and Best Practices for the Use of Long
               Polling and Streaming in Bidirectional HTTP", RFC 6202,
@@ -496,15 +516,6 @@ Internet-Draft                 HTTP-PUBSUB                     June 2019
               Transfer Protocol Version 2 (HTTP/2)", RFC 7540,
               DOI 10.17487/RFC7540, May 2015,
               <https://www.rfc-editor.org/info/rfc7540>.
-
-
-
-
-
-Xie & Frindell          Expires December 30, 2019               [Page 9]
-
-Internet-Draft                 HTTP-PUBSUB                     June 2019
-
 
    [RFC8441]  McManus, P., "Bootstrapping WebSockets with HTTP/2",
               RFC 8441, DOI 10.17487/RFC8441, September 2018,
@@ -546,15 +557,4 @@ Authors' Addresses
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-Xie & Frindell          Expires December 30, 2019              [Page 10]
+Xie & Frindell           Expires January 3, 2020               [Page 10]
