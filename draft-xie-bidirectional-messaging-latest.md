@@ -198,8 +198,8 @@ to intermediaries and servers in the network.
 RStreams and XStreams are designed for different purposes. RStreams are
 **RECOMMENDED** for exchanging metadata only, and **SHOULD** be long lived, as
 once an RStream is closed any routing information it carried is lost.
-Furthermore, if at least one RStream is not re-established promptly, no new
-XStreams can be created. To keep an RStream open,  endpoints **SHOULD NOT** send
+Unless a new RStream is re-established promptly, no new XStreams can be initiated. 
+To keep an RStream open,  endpoints **SHOULD NOT** send
 a HEADERS or DATA frame containing the END_STREAM flag. Implementations might
 require special logic to prevent RStreams from timing out. For example, refresh
 the timeouts on RStreams if a new XStream is exchanged.
