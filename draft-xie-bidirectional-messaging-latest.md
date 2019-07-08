@@ -46,7 +46,7 @@ information between endpoints.
 
 Many of these capabilities are generic and can be useful in applications beyond
 web browsing, such as Publish/Subscribe protocols or RPC. However, HTTP/2
-framing's unidirectional client to server communication pattern prevents wider
+framing's request/response client to server communication pattern prevents wider
 use in this type of application. This draft proposes an HTTP/2 protocol
 extension that enables bidirectional communication between client and server.
 
@@ -60,44 +60,45 @@ from servers to clients, limiting additional use-cases, such as sending messages
 and notifications from servers to clients immediately when they become
 available.
 
-To work around this limitation, several techniques are used, like long polling
-{{!RFC6202}}, WebSocket {{!RFC8441}}, and tunneling. These techniques generally
-layer application protocols on top of HTTP/2 and use HTTP/2 streams as transport
-connections. These solutions often defeat optimizations provided by HTTP/2.
-Multiplexing multiple parallel interactions onto one HTTP/2 stream reintroduces
-head of line blocking within that stream, application metadata is often
-encapsulated into DATA frames rather than HEADERS frames, so header compression
-is no longer effective, and adding an additional layer of framing to the user
-data reduces the wire efficiency advantages of HTTP/2 binary framing.
+Several techniques have been developed to workaround these limitations: long
+polling {{!RFC6202}}, WebSocket {{!RFC8441}}, and tunneling using the CONNECT
+method. All of these approaches layer an application protocol on top of HTTP/2,
+using HTTP/2 streams as transport connections. This layering defeats the
+optimizations provided by HTTP/2. For example, multiplexing multiple parallel
+interactions onto one HTTP/2 stream reintroduces head of line blocking. Also,
+application metadata is encapsulated into DATA frames, rather than HEADERS
+frames, making header compression is impossible. Further, user data is framed
+multiple times at different protocol layers, which offsets the wire efficiency
+of HTTP/2 binary framing. Take WebSocket over HTTP/2 as an example, user data is
+framed at the application protocol, WebSocket, and HTTP/2 layers. This not only
+introduces the overhead on the wire, but also complicates data processing.
+Finally, intermediaries have no visibility to user interactions layered on a
+single HTTP/2 stream, and lose the capability to collect telemetry metrics
+(e.g., time to the first/last byte of request and response) for services.
 
-For example, WebSocket over HTTP/2 frames user data both at the WebSocket layer
-and the HTTP/2 layer. This not only introduces additional overhead on the wire,
-but also complicates the data processing. These techniques also pose new
-operational challenges to intermediaries. If traffic from an entire user session
-is encapsulated into one HTTP/2 stream, this stream can last a very long time.
-Intermediaries may take long time to drain these streams. Unfortunately, GOAWAY
-only signals the remote endpoint to stop using the connection for new streams
-and often does not help drain the remaining open streams. Moreover,
-intermediaries have no visibility to user interactions, and lose the capability
-to collect telemetry metrics (e.g., time to the first/last byte of request and
-response) for services.
+These techniques also pose new operational challenges to intermediaries. Because
+all traffic from a user's session is encapsulated into one HTTP/2 stream, this
+stream can last a very long time. Intermediaries may take long time to drain
+these streams. HTTP/2 GOAWAY only signals the remote endpoint to stop using the
+connection for new streams; additional work is required to prevent new
+application messages from being initiated on the long lived stream.
 
 In this draft, a new HTTP/2 frame is introduced which has the routing properties
 of a PUSH_PROMISE frame and the bi-directionality of a HEADERS frame. The
 extension provides several benefits:
 
-1. After a HTTP/2 connection is established, a
-server can initiate streams to the client at any time, and the client can respond to
-the incoming streams accordingly. That is, the communication over HTTP/2 is
-bidirectional and symmetric.
+1. After a HTTP/2 connection is established, a server can initiate streams to
+the client at any time, and the client can respond to the incoming streams
+accordingly. That is, the communication over HTTP/2 is bidirectional and
+symmetric.
 
 2. All of the HTTP/2 technologies and optimizations still apply. Intermediaries
-also have all the necessary information to properly handle the communication
+also have all the necessary metadata to properly handle the communication
 between the client and the server.
 
-3. Clients are able to group streams together for routing purposes,
-such that each individual stream group can be used for a different service,
-within the same HTTP/2 connection.
+3. Clients are able to group streams together for routing purposes, such that
+each individual stream group can be used for a different service, within the
+same HTTP/2 connection.
 
 # Conventions and Terminology
 
@@ -122,17 +123,18 @@ facilitate XStreams' intermediary traversal.
 A new HTTP/2 stream called eXtended stream (XStream) is introduced for
 exchanging user data bidirectionally. An XStream is opened by an XHEADERS frame,
 and **MAY** be continued by CONTINUATION and DATA frames. XStreams can be
-initiated by either clients or servers and every XStream **MUST** be associated
-with an open RStream. In this way, XStreams can be routed according to their
-RStreams by intermediaries and servers. XStream **MUST NOT** be associated with
-any other XStream, or any closed RStream. Otherwise, it cannot be routed
-properly.
+initiated by either clients or servers. Unlike a regular stream, an XStream
+**MUST** be associated with an open RStream. In this way, XStreams can be routed
+according to their RStreams by intermediaries and servers. XStream **MUST NOT**
+be associated with any other XStream, or any closed RStream. Otherwise, it
+cannot be routed properly.
 
 ## Bidirectional Communication
 
-With RStreams and XStreams, HTTP/2 can be used for bidirectional messaging
-communication. As shown in the follow diagrams, as long as an RStream is open
-from client to server, either endpoint can initiate an XStream to its peer.
+With RStreams and XStreams, HTTP/2 framing can be used natively for
+bidirectional communication. As shown in the following diagram, as long as an
+RStream is open from client to server, either endpoint can initiate an XStream
+to its peer.
 
 ~~~
 +--------+   RStream (5)   +---------+    RStream (1)   +--------+
@@ -160,8 +162,9 @@ A client can multiplex RStreams, XStreams and regular HTTP/2 streams into a
 single HTTP/2 connection. Additionally, all of the XStreams associated with the
 same RStream form a logical stream group, and are routed to the same endpoint.
 This enables clients to access different services without initiating new
-connections. As shown in {{fig-multiplex}}, the client can exchange data with
-three different services (PubSub, RPC, and CDN) using one HTTP/2 connection.
+connections,or including routing metadata in every message. As shown in
+{{fig-multiplex}}, the client can exchange data with three different services
+(PubSub, RPC, and CDN) using one HTTP/2 connection.
 
 ~~~
 +--------+   RStream (5)   +---------+    RStream (1)   +----------+
@@ -190,20 +193,21 @@ opportunities, like prioritizing interactive streams over streams used to fetch
 static content. It also reduces the number of connections that are adding load
 to intermediaries and servers in the network.
 
-## Recommended Usage
+## Recommended Usage 
 
 RStreams and XStreams are designed for different purposes. RStreams are
-**RECOMMENDED** for exchanging metadata only, and **SHOULD** be long lived, as once
-RStream is closed any routing information it carried is lost. Furthermore, if at
-least one RStream is not re-established promptly, no new XStreams can be
-created. To maintain active RStreams, clients and servers **SHOULD NOT** set the
-END_STREAM flag, and **SHOULD** refresh the timeouts on RStreams if a new
-XStream is exchanged.
+**RECOMMENDED** for exchanging metadata only, and **SHOULD** be long lived, as
+once an RStream is closed any routing information it carried is lost.
+Furthermore, if at least one RStream is not re-established promptly, no new
+XStreams can be created. To keep an RStream open,  endpoints **SHOULD NOT** send
+a HEADERS or DATA frame containing the END_STREAM flag. Implementations might
+require special logic to prevent RStreams from timing out. For example, refresh
+the timeouts on RStreams if a new XStream is exchanged.
 
 By contrast, XStreams are **RECOMMENDED** for exchanging user data, and
 **SHOULD** be short lived. In long polling, WebSocket and tunneling solutions,
 streams have to be kept alive for a long time because servers need those streams
-for sending back updates in a future time. With this extension, servers are able
+for sending data to the client in the future. With this extension, servers are able
 to initiate new XStreams as long as RStreams are still open and no longer need
 to keep idle streams around for future use. This allows all parties involved in
 the connection to keep resource usage to a minimum. Morever, short lived
@@ -215,7 +219,7 @@ drain within a short period of time.
 
 RStreams are regular HTTP/2 streams that follow the stream lifecycle described
 in {{!RFC7540}}, section 5.1. XStreams use the same lifecycle as regular HTTP/2
-streams, but have extra dependence on their RStreams. If an RStream is reset,
+streams, but have extra dependency on their RStreams. If an RStream is reset,
 endpoints **MUST** reset the XStreams associated with that RStream. If the
 RStream is closed, endpoints **SHOULD** allow the existing XStreams to complete
 normally. The RStream **SHOULD** remain open while communication is ongoing.
@@ -225,19 +229,19 @@ XStreams are open.
 A sender **MUST NOT** initiate new XStreams with an RStream that is in the
 closed or half closed (remote) state.
 
-Endpoints process new XStreams only when the RStream is open or half closed
-(local) state. If an endpoint receives an XHEADERS frame specifying an RStream
-in the closed or half closed (remote) state, it **MUST** respond with a
-connection error of type ROUTING_STREAM_ERROR.
+Endpoints process new XStreams only when the associated RStream is in the open
+or half closed (local) state. If an endpoint receives an XHEADERS frame
+specifying an RStream in the closed or half closed (remote) state, it **MUST**
+respond with a connection error of type ROUTING_STREAM_ERROR.
 
-## Negotiate the Extension Through SETTINGS Frame
+## Negotiating the Extension
 
-The extension **SHOULD** be disabled by default. Endpoints can negotiate the use
-of this extension through the SETTINGS frame, and once enabled, this extension
-**MUST NOT** be disabled over the lifetime of the connection. As noted in
-{{!RFC7540}}, section 5.5, HTTP/2 compliant implemenations which do not yet
-support this extension **MUST** ignore the unknown ENABLE_XHEADERS setting and
-XHEADERS frame.
+The extension **SHOULD** be disabled by default. As noted in {{!RFC7540}},
+section 5.5, HTTP/2 compliant implementations which do not support this
+extension **MUST** ignore the unknown ENABLE_XHEADERS setting and XHEADERS
+frame. Endpoints can negotiate the use of this extension through the SETTINGS
+frame, and once enabled, this extension **MUST NOT** be disabled over the
+lifetime of the connection. 
 
 This document introduces another SETTINGS parameter, ENABLE_XHEADERS, which
 **MUST** have a value of 0 or 1.
@@ -252,8 +256,8 @@ endpoint can disover the support at the earliest possible time.
 An endpoint can send XHEADERS frames immediately upon receiving a SETTINGS frame
 with ENABLE_XHEADERS=1. An endpoint **MUST NOT** send out XHEADERS before
 receiving a SETTINGS frame with the ENABLE_XHEADERS=1. If a remote endpoint does
-not support this extension yet, the XHEADERS will be ignored, making the header
-compression contexts inconsistent between sender and receiver.
+not support this extension, the XHEADERS will be ignored, making the header
+compression context inconsistent between sender and receiver.
 
 If an endpoint supports this extension, but receives XHEADERS frames before
 ENABLE_XHEADERS, it **SHOULD** to respond with a connection error
@@ -261,7 +265,7 @@ XHEADER_NOT_ENABLED_ERROR. This helps the remote endpoint to implement this
 extension properly.
 
 Intermediaries **SHOULD** send the ENABLE_XHEADERS setting to clients only if
-intermediaries and their upstream servers can support this extension. If an
+intermediaries and their upstream servers support this extension. If an
 intermediary receives an XStream but discovers the destination endpoint does not
 support the extension, it **MUST** reset the stream with
 XHEADER_NOT_ENABLED_ERROR.
@@ -280,8 +284,8 @@ RStream groups does not make sense, because they belong to different services.
 # HTTP/2 XHEADERS Frame
 
 The XHEADERS frame (type=0xfb) has all the fields and frame header flags defined
-by HEADERS frame in HEADERS {{!RFC7540}}, section 6.2. Moreover, an XHEADERS
-frame has one extra field, Routing Stream ID. It is used to open an XStream, and
+by HEADERS frame in HEADERS {{!RFC7540}}, section 6.2. The XHEADERS frame has
+one extra field, Routing Stream ID. It is used to open an XStream, and
 additionally carries a header block fragment. XHEADERS frames can be sent on a
 stream in the "idle", "open", or "half-closed (remote)" state.
 
