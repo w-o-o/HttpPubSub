@@ -114,10 +114,10 @@ apply to this document.
 
 ## RStream and XStream
 
-A routing stream (RStream) is a regular HTTP/2 stream in nature. It is opened by
-a HEADERS frame, and **MAY** be continued by CONTINUATION and DATA frames.
-RStreams are initiated by clients to servers, and can be independently routed by
-intermediaries on the network path. The main purpose for RStream is to
+A routing stream (RStream) is a regular HTTP/2 stream. It is opened by a HEADERS
+frame, and **MAY** be continued by CONTINUATION and DATA frames. RStreams are
+initiated by clients to servers, and can be independently routed by
+intermediaries on the network path. The main purpose for an RStream is to
 facilitate XStreams' intermediary traversal.
 
 A new HTTP/2 stream called eXtended stream (XStream) is introduced for
@@ -132,7 +132,7 @@ cannot be routed properly.
 ## Bidirectional Communication
 
 With RStreams and XStreams, HTTP/2 framing can be used natively for
-bidirectional communication. As shown in the follow diagrams, as long as an
+bidirectional communication. As shown in the following diagram, as long as an
 RStream is open from client to server, either endpoint can initiate an XStream
 to its peer.
 
@@ -158,13 +158,13 @@ to its peer.
 
 ## XStream Grouping
 
-A client can multiplex RStreams, XStreams and regular HTTP/2 streams into one
-single HTTP/2 connection. Beyond that, all the XStreams associated with the same
-RStream form a logical stream group, and are routed to the same endpoint. This
-enables clients to access different services without initiating new connections,
-or including routing metadata in every message.  As shown in the following
-diagram, the client can exchange data with a publish/subscribe service, an RPC
-service and a CDN within one HTTP/2 connection.
+A client can multiplex RStreams, XStreams and regular HTTP/2 streams into a
+single HTTP/2 connection. Additionally, all of the XStreams associated with the
+same RStream form a logical stream group, and are routed to the same endpoint.
+This enables clients to access different services without initiating new
+connections,or including routing metadata in every message. As shown in
+{{fig-multiplex}}, the client can exchange data with three different services
+(PubSub, RPC, and CDN) using one HTTP/2 connection.
 
 ~~~
 +--------+   RStream (5)   +---------+    RStream (1)   +----------+
@@ -185,36 +185,40 @@ service and a CDN within one HTTP/2 connection.
 HTTP/2 stream within one HTTP/2 connection."}
 
 Reusing one connection for different purposes saves the latency of setting up
-new connections. This is desirable for mobile devices since they usually have
-higher latency network connectivity and tighter battery constraints.
+new connections. This is especially desirable for mobile devices which often
+have higher latency network connectivity and tighter battery constraints.
 Multiplexing these services also allows them to share a single transport
-connection congestion control context. It opens new optimization opportunities,
-like prioritizing interactive streams over static content fetching
-streams. It also reduces the number of connections at intermediaries and
-servers.
+connection congestion control context. It also opens new optimization
+opportunities, like prioritizing interactive streams over streams used to fetch
+static content. It also reduces the number of connections that are adding load
+to intermediaries and servers in the network.
 
-## Recommended Usage RStreams and XStreams are designed for different
-purposes. To get the more benefit from this extension, RStreams are recommended
-for exchanging metadata only, and **SHOULD** be kept long lived. Once an RStream
-is closed, the endpoints can no longer use it for routing.  The client has to
-establish a new RStream before either endpoint can initate a new XStream. To
-keep an RStream open, endpoints SHOULD NOT send a DATA frame containing the
-END_STREAM flag.  Implementations might require special logic to prevent RStreams from timing out.
+## Recommended Usage 
+
+RStreams and XStreams are designed for different purposes. RStreams are
+**RECOMMENDED** for exchanging metadata only, and **SHOULD** be long lived, as
+once an RStream is closed any routing information it carried is lost.
+Furthermore, if at least one RStream is not re-established promptly, no new
+XStreams can be created. To keep an RStream open,  endpoints **SHOULD NOT** send
+a HEADERS or DATA frame containing the END_STREAM flag. Implementations might
+require special logic to prevent RStreams from timing out. For example, refresh
+the timeouts on RStreams if a new XStream is exchanged.
 
 By contrast, XStreams are **RECOMMENDED** for exchanging user data, and
 **SHOULD** be short lived. In long polling, WebSocket and tunneling solutions,
-streams have to be kept long live because servers need those streams for sending
-data to the client in the future. With this extension, servers are able to
-initiate new XStreams as long as RStreams are still open.  Keeping many XStreams
-alive for a long time is unnecessary, and costs system resources on
-intermediaries and server. Morever, short lived XStreams make connection
-graceful shutdown easier on intermediaries and servers. After exchanging GOAWAY
-frames, open XStreams can be drained within a short time.
+streams have to be kept alive for a long time because servers need those streams
+for sending data to the client in the future. With this extension, servers are able
+to initiate new XStreams as long as RStreams are still open and no longer need
+to keep idle streams around for future use. This allows all parties involved in
+the connection to keep resource usage to a minimum. Morever, short lived
+XStreams make graceful shutdown of a connection easier for intermediaries and
+servers. After exchanging GOAWAY frames, short lived XStreams will naturally
+drain within a short period of time.
 
 ## States of RStream and XStream
 
-RStreams are regular HTTP/2 streams that follow the stream lifecycle in
-{{!RFC7540}}, section 5.1. XStreams use the same lifecycle as regular HTTP/2
+RStreams are regular HTTP/2 streams that follow the stream lifecycle described
+in {{!RFC7540}}, section 5.1. XStreams use the same lifecycle as regular HTTP/2
 streams, but have extra dependency on their RStreams. If an RStream is reset,
 endpoints **MUST** reset the XStreams associated with that RStream. If the
 RStream is closed, endpoints **SHOULD** allow the existing XStreams to complete
@@ -222,46 +226,49 @@ normally. The RStream **SHOULD** remain open while communication is ongoing.
 Endpoints **SHOULD** refresh any timeout on the RStream while its associated
 XStreams are open.
 
-A sender **MUST NOT** initiate new XStreams on an RStream that is in the open
-or half closed (remote) state.
+A sender **MUST NOT** initiate new XStreams with an RStream that is in the
+closed or half closed (remote) state.
 
 Endpoints process new XStreams only when the associated RStream is in the open
 or half closed (local) state. If an endpoint receives an XHEADERS frame
-specifying an RStream in the closed or haf closed (remote) state, it **MUST**
+specifying an RStream in the closed or half closed (remote) state, it **MUST**
 respond with a connection error of type ROUTING_STREAM_ERROR.
 
 ## Negotiating the Extension
 
-The extension **SHOULD** be disabled by default. As suggested in {{!RFC7540}},
-section 5.5, the unknown ENABLE_XHEADERS setting and XHEADERS frame **MUST** be
-ignored by HTTP/2 compliant implementations, which do not support this
-extension.
+The extension **SHOULD** be disabled by default. As noted in {{!RFC7540}},
+section 5.5, HTTP/2 compliant implementations which do not support this
+extension **MUST** ignore the unknown ENABLE_XHEADERS setting and XHEADERS
+frame. Endpoints can negotiate the use of this extension through the SETTINGS
+frame, and once enabled, this extension **MUST NOT** be disabled over the
+lifetime of the connection. 
 
-Endpoints can negotiate the use of the extension through the SETTINGS frame. If
-an implementation supports the extension, it is **RECOMMENDED** to include the
-ENABLE_XHEADERS setting in the initial SETTINGS frame, such that the remote
-endpoint can disover the support at the earliest time. Once enabled, this
-extension **MUST NOT** be disabled over the lifetime of the connection.
+This document introduces another SETTINGS parameter, ENABLE_XHEADERS, which
+**MUST** have a value of 0 or 1.
+
+Once a ENABLE_XHEADERS parameter has been sent with a value of 1, an endpoint
+**MUST NOT** send the parameter with a value of 0.
+
+If an implementation supports the extension, it is **RECOMMENDED** to include
+the ENABLE_XHEADERS setting in the initial SETTINGS frame, such that the remote
+endpoint can disover the support at the earliest possible time.
 
 An endpoint can send XHEADERS frames immediately upon receiving a SETTINGS frame
-with ENABLE_XHEADERS=1.
-
-An endpoint **MUST NOT** send out XHEADERS before receiving a SETTINGS frame
-with the ENABLE_XHEADERS=1. If a remote endpoint does not support this extension
-, the XHEADERS will be ignored, making the header compression context
-inconsistent between sender and receiver.
+with ENABLE_XHEADERS=1. An endpoint **MUST NOT** send out XHEADERS before
+receiving a SETTINGS frame with the ENABLE_XHEADERS=1. If a remote endpoint does
+not support this extension, the XHEADERS will be ignored, making the header
+compression context inconsistent between sender and receiver.
 
 If an endpoint supports this extension, but receives XHEADERS frames before
-ENABLE_XHEADERS, it is **RECOMMENDED** to respond with a connection error
+ENABLE_XHEADERS, it **SHOULD** to respond with a connection error
 XHEADER_NOT_ENABLED_ERROR. This helps the remote endpoint to implement this
 extension properly.
 
-Intermediaries **SHOULD** send the ENABLE_XHEADERS setting to clients, only if
+Intermediaries **SHOULD** send the ENABLE_XHEADERS setting to clients only if
 intermediaries and their upstream servers support this extension. If an
 intermediary receives an XStream but discovers the destination endpoint does not
 support the extension, it **MUST** reset the stream with
 XHEADER_NOT_ENABLED_ERROR.
-
 
 ## Interaction with Standard HTTP/2 Features
 
@@ -270,11 +277,9 @@ streams still apply to XStreams. For example, like streams, XStreams are counted
 against the concurrent stream limit, defined in {{!RFC7540}}, Section 5.1.2. The
 connection level and stream level flow control principles are still valid for
 XStreams. However, for the stream priority and dependencies, XStreams have one
-extra constraint: a XStream can have a dependency on its RStream itself, or any
-XStream sharing with the same RStream. Prioritizing the XStreams across
-different RStream groups does not make sense, because they belong to different
-services.
-
+extra constraint: a XStream can have a dependency on its RStream, or any XStream
+sharing with the same RStream. Prioritizing the XStreams across different
+RStream groups does not make sense, because they belong to different services.
 
 # HTTP/2 XHEADERS Frame
 
@@ -308,15 +313,15 @@ of header block fragments, if the headers do not fit into one XHEADERS frame.
 
 The RStream specified in a XHEADERS frame **MUST** be an open stream. The
 recipient **MUST** respond with a connection error of type ROUTING_STREAM_ERROR
-PROTOCOL_ERROR, if the specified RStream is missing; or is an XStream rather
-than a regualr HTTP/2 stream; or is closed or half-closed (remote). Otherwise,
-the states maintained for header compression or flow control) may be out of
-sync.
+PROTOCOL_ERROR, if the specified RStream is missing, is an XStream rather than a
+regualr HTTP/2 stream, or is closed or half-closed (remote). Otherwise, the
+states maintained for header compression or flow control may be out of sync.
 
 ## Examples
-This section shows HTTP/1.1 request and response messages are transmitted on
-RStream with regualar HEADERS frames, and on XStream with HTTP/2 XHAEDERS
-frames.
+
+This section shows HTTP/1.1 request and response messages that are transmitted
+on an RStream with regualar HEADERS frames, and on an XStream with HTTP/2
+XHAEDERS frames.
 
 ~~~
   GET /login HTTP/1.1               HEADERS
@@ -347,7 +352,7 @@ RStream"}
 {: #c2s-rstream-resp title="The response message and HEADERS frame on an
 RStream"}
 
-The server initiate an XStream to this client.
+The server initiates an XStream to this client.
 
 ~~~
   POST /new_msg HTTP/1.1            XHEADERS
@@ -379,8 +384,9 @@ XStream"}
 
 # IANA Considerations
 
-This document establishes a registry for a new frame type, setting, and error
-code.
+This specification adds an entry to the "HTTP/2 Frame Type" registry, the
+"HTTP/2 Settings" registry, and the "HTTP/2 Error Code" registry, all defined in
+{{!RFC7540}}.
 
 ## FRAME TYPE Registry
 
