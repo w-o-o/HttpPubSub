@@ -1,18 +1,19 @@
 ---
 title: An HTTP/2 Extension for Bidirectional Message Communication
-docname: draft-xie-bidirectional-messaging-latest
+docname: draft-xie-bidirectional-messaging-02
 abbrev: HTTP-PUBSUB
 ipr: trust200902
 area: Internet
 workgroup: httpbis Working Group
 submissiontype: IETF
+category: std
 keyword: Internet-Draft
 #date: 2019-03-01T00:00:00Z
 
 seriesInfo:
  -
     name: Internet-Draft
-    value: draft-xie-bidirectional-messaging-00
+    value: draft-xie-bidirectional-messaging-02
     stream: IETF
     status: standard
 
@@ -67,18 +68,18 @@ using HTTP/2 streams as transport connections. This layering defeats the
 optimizations provided by HTTP/2. For example, multiplexing multiple parallel
 interactions onto one HTTP/2 stream reintroduces head of line blocking. Also,
 application metadata is encapsulated into DATA frames, rather than HEADERS
-frames, making header compression is impossible. Further, user data is framed
+frames, making header compression impossible. Further, user data is framed
 multiple times at different protocol layers, which offsets the wire efficiency
 of HTTP/2 binary framing. Take WebSocket over HTTP/2 as an example, user data is
 framed at the application protocol, WebSocket, and HTTP/2 layers. This not only
-introduces the overhead on the wire, but also complicates data processing.
+introduces overhead on the wire, but also complicates data processing.
 Finally, intermediaries have no visibility to user interactions layered on a
 single HTTP/2 stream, and lose the capability to collect telemetry metrics
 (e.g., time to the first/last byte of request and response) for services.
 
 These techniques also pose new operational challenges to intermediaries. Because
 all traffic from a user's session is encapsulated into one HTTP/2 stream, this
-stream can last a very long time. Intermediaries may take long time to drain
+stream can last a very long time. Intermediaries may take a long time to drain
 these streams. HTTP/2 GOAWAY only signals the remote endpoint to stop using the
 connection for new streams; additional work is required to prevent new
 application messages from being initiated on the long lived stream.
@@ -132,9 +133,9 @@ cannot be routed properly.
 ## Bidirectional Communication
 
 With RStreams and XStreams, HTTP/2 framing can be used natively for
-bidirectional communication. As shown in the following diagram, as long as an
-RStream is open from client to server, either endpoint can initiate an XStream
-to its peer.
+bidirectional communication. As shown in {{fig-client-to-server}} and
+{{fig-server-to-client}} , as long as an RStream is open from client to server,
+either endpoint can initiate an XStream to its peer.
 
 ~~~
 +--------+   RStream (5)   +---------+    RStream (1)   +--------+
