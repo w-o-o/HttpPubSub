@@ -1,5 +1,5 @@
 ---
-title: An HTTP/2 Extension for bidirectional message communication
+title: An HTTP/2 Extension for Bidirectional Message Communication
 docname: draft-xie-bidirectional-messaging-latest
 abbrev: HTTP-PUBSUB
 ipr: trust200902
@@ -30,31 +30,35 @@ author:
 
 --- abstract
 
-This draft proposes an http2 protocol extension, which enables bidirectional
+This draft proposes an HTTP/2 protocol extension that enables bidirectional
 messaging communication between client and server.
 
 --- middle
 
 # Introduction
 
-HTTP/2 is the de facto application protocol in Internet. The optimizations
-developed in HTTP/2, like stream multiplexing, header compression, efficient
-binary message framing, and graceful shutdown of open streams, are very generic.
-They can be useful in non web browsing applications, for example,
-Publish/Subscribe, RPC. However, the request/response from client to server
-communication pattern limits HTTP/2 from wider use in these applications. This
-draft proposes an HTTP/2 protocol extension, which enables bidirectional
-communication between client and server.
+HTTP/2 {{!RFC7540}} transports HTTP messages via a framing layer that includes
+many technologies and optimizations designed to make communication more
+efficient between clients and servers. These include multiplexing of multiple
+streams on a single underlying transport connection, flow control, stream
+dependencies and priorities, header compression, and exchange of configuration
+information between endpoints.
 
-The only mechanism HTTP/2 provides for server to client communication is server
-push. That is, servers can initiate unidirectional push promised streams to
-clients, but clients cannot respond to them, except accepting or discarding them
-silently. More interestingly, intermediaries may have different server push
-policies, and may not forward server pushes downstream at all. This best effort
-mechanism is not reliable to deliver content from servers to clients. While this
-satisfies some use-cases, its unidirectional property limits HTTP/2 for wider
-use, for example, sending messages and notifications from servers to clients
-when an acknowledgement is required.
+Many of these capabilities are generic and can be useful in applications beyond
+web browsing, such as Publish/Subscribe protocols or RPC. However, HTTP/2
+framing's request/response client to server communication pattern prevents wider
+use in this type of application. This draft proposes an HTTP/2 protocol
+extension that enables bidirectional communication between client and server.
+
+Currently, the only mechanism in HTTP/2 for server to client communication is
+server push. That is, servers can initiate unidirectional push promised streams
+to clients, but clients cannot respond to them and either accept or discard
+them silently. Additionally, intermediaries along the path may have different
+server push policies and may not forward push promised streams to the downstream
+client. This best effort mechanism is not sufficient to reliably deliver content
+from servers to clients, limiting additional use-cases, such as sending messages
+and notifications from servers to clients immediately when they become
+available.
 
 Several techniques have been developed to workaround these limitations: long
 polling {{!RFC6202}}, WebSocket {{!RFC8441}}, and tunneling using the CONNECT
@@ -80,15 +84,21 @@ connection for new streams; additional work is required to prevent new
 application messages from being initiated on the long lived stream.
 
 In this draft, a new HTTP/2 frame is introduced which has the routing properties
-of PUSH_PROMISE frame and the bi-directionality of HEADERS frame. The extension
-provides several benefits: 1) after a HTTP/2 connection setup, a server can
-initiate streams to the client at any time, and the client can respond to the
-incoming streams accordingly. This makes communication over HTTP/2
-bidirectional and symmetric. 2) All the HTTP/2 optimizations still apply.
-Intermediaries also have all the necessary metadata to accomplish their goals.
-3) Further, clients are able to group streams together for routing purposes,
-such that each individual stream group can be used for a different service,
-within the same HTTP/2 connections.
+of a PUSH_PROMISE frame and the bi-directionality of a HEADERS frame. The
+extension provides several benefits:
+
+1. After a HTTP/2 connection is established, a server can initiate streams to
+the client at any time, and the client can respond to the incoming streams
+accordingly. That is, the communication over HTTP/2 is bidirectional and
+symmetric.
+
+2. All of the HTTP/2 technologies and optimizations still apply. Intermediaries
+also have all the necessary metadata to properly handle the communication
+between the client and the server.
+
+3. Clients are able to group streams together for routing purposes, such that
+each individual stream group can be used for a different service, within the
+same HTTP/2 connection.
 
 # Conventions and Terminology
 
@@ -113,7 +123,7 @@ facilitate XStreams' intermediary traversal.
 A new HTTP/2 stream called eXtended stream (XStream) is introduced for
 exchanging user data bidirectionally. An XStream is opened by an XHEADERS frame,
 and **MAY** be continued by CONTINUATION and DATA frames. XStreams can be
-initiated by either clients or servers. Unlike regular a stream, an XStream
+initiated by either clients or servers. Unlike a regular stream, an XStream
 **MUST** be associated with an open RStream. In this way, XStreams can be routed
 according to their RStreams by intermediaries and servers. XStream **MUST NOT**
 be associated with any other XStream, or any closed RStream. Otherwise, it
