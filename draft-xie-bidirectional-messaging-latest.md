@@ -1,5 +1,5 @@
 ---
-title: An HTTP/2 Extension for bidirectional message communication
+title: An HTTP/2 Extension for Bidirectional Message Communication
 docname: draft-xie-bidirectional-messaging-latest
 abbrev: HTTP-PUBSUB
 ipr: trust200902
@@ -30,63 +30,74 @@ author:
 
 --- abstract
 
-This draft proposes an http2 protocol extension, which enables bidirectional
+This draft proposes an HTTP/2 protocol extension that enables bidirectional
 messaging communication between client and server.
 
 --- middle
 
 # Introduction
 
-HTTP/2 is the de facto application protocol in Internet. The optimizations
-developed in HTTP/2, like stream multiplexing, header compression, efficient
-binary message framing, and graceful shutdown of open streams, are very generic.
-They can be useful in non web browsing applications, for example,
-Publish/Subscribe, RPC. However, the unidirectional from client to server
-communication pattern limits HTTP/2 from wider use in these applications. This
-draft proposes an HTTP/2 protocol extension, which enables bidirectional
-communication between client and server.
+HTTP/2 {{!RFC7540}} transports HTTP messages via a framing layer that includes
+many technologies and optimizations designed to make communication more
+efficient between clients and servers. These include multiplexing of multiple
+streams on a single underlying transport connection, flow control, stream
+dependencies and priorities, header compression, and exchange of configuration
+information between endpoints.
 
-So far, the only mechanism HTTP/2 provides for server to client communication is
+Many of these capabilities are generic and can be useful in applications beyond
+web browsing, such as Publish/Subscribe protocols or RPC. However, HTTP/2
+framing's unidirectional client to server communication pattern prevents wider
+use in this type of application. This draft proposes an HTTP/2 protocol
+extension that enables bidirectional communication between client and server.
+
+Currently, the only mechanism in HTTP/2 for server to client communication is
 server push. That is, servers can initiate unidirectional push promised streams
-to clients, but clients cannot respond to them, except accepting or discarding
-them silently. More interesting, the intermediaries may have different server
-push policies, and may not forward to downstream at all. The best effort
-mechanism is not reliable to deliver content from servers to clients. While this
-satisfies some use-cases, its unidirectional property limits HTTP/2 for wider
-use, for example, send messages and notifications from servers to clients at the
-time they are available.
+to clients, but clients cannot respond to them and either accept or discard
+them silently. Additionally, intermediaries along the path may have different
+server push policies and may not forward push promised streams to the downstream
+client. This best effort mechanism is not sufficient to reliably deliver content
+from servers to clients, limiting additional use-cases, such as sending messages
+and notifications from servers to clients immediately when they become
+available.
 
-To work around this limitation, many techniques are developed, like long polling
-{{!RFC6202}}, WebSocket {{!RFC8441}}, and tunneling. They are common at:
-layering application protocol on top of HTTP/2 and using HTTP/2 streams as
-transport connections. These solutions more or less defeat the optimizations
-provided by HTTP/2. For example, first, if multiplexing multiple parallel
-interactions into one HTTP/2 stream, the head of line block will be
-re-introduced. Second, application meta data is encapsulated into DATA frame,
-rather than HEADERS frame, so header compression is impossible. Third, user data
-are framed more than once at different protocol layers, which offsets the wire
-efficiency from HTTP/2 binary frame. Take WebSocket over HTTP/2 as an example,
-user data is framed at application protocol, WebSocket, and HTTP/2 layers. This
-not only introduces the byte overhead on the wire, but also complicates the data
-processing. These techniques also pose new operational challenges to
-intermediaries. Due to the traffic from the whole user session is encapsulated
-into one HTTP/2 stream, this stream can last very long time. Intermediaries may
-take long time to drain these streams. As a remind, GOAWAY can only signals the
-remote endpoint to stop using the connection for new streams and does not help
-the open streams. Moreover, intermediaries have no visibility to user
-interactions, and lose the capability to collect telemetry metrics (e.g., time
-to the first/last byte of request and response) for services.
+To work around this limitation, several techniques are used, like long polling
+{{!RFC6202}}, WebSocket {{!RFC8441}}, and tunneling. These techniques generally
+layer application protocols on top of HTTP/2 and use HTTP/2 streams as transport
+connections. These solutions often defeat optimizations provided by HTTP/2.
+Multiplexing multiple parallel interactions onto one HTTP/2 stream reintroduces
+head of line blocking within that stream, application metadata is often
+encapsulated into DATA frames rather than HEADERS frames, so header compression
+is no longer effective, and adding an additional layer of framing to the user
+data reduces the wire efficiency advantages of HTTP/2 binary framing.
+
+For example, WebSocket over HTTP/2 frames user data both at the WebSocket layer
+and the HTTP/2 layer. This not only introduces additional overhead on the wire,
+but also complicates the data processing. These techniques also pose new
+operational challenges to intermediaries. If traffic from an entire user session
+is encapsulated into one HTTP/2 stream, this stream can last a very long time.
+Intermediaries may take long time to drain these streams. Unfortunately, GOAWAY
+only signals the remote endpoint to stop using the connection for new streams
+and often does not help drain the remaining open streams. Moreover,
+intermediaries have no visibility to user interactions, and lose the capability
+to collect telemetry metrics (e.g., time to the first/last byte of request and
+response) for services.
 
 In this draft, a new HTTP/2 frame is introduced which has the routing properties
-of PUSH_PROMISE frame and the bi-directionality of HEADERS frame. The extension
-provides several benefits: 1) after a HTTP/2 connection setup, a server can
-initiate streams to the client anytime, and the client can respond to the
-incoming streams accordingly. That is, the communication over HTTP/2 is
-bidirectional and symmetric. 2) All the HTTP/2 optimizations still apply.
-Intermediaries also have all the necessary meta data to accomplish their goals.
-3) Further, clients are able to group streams together for routing purposes,
+of a PUSH_PROMISE frame and the bi-directionality of a HEADERS frame. The
+extension provides several benefits:
+
+1. After a HTTP/2 connection is established, a
+server can initiate streams to the client at any time, and the client can respond to
+the incoming streams accordingly. That is, the communication over HTTP/2 is
+bidirectional and symmetric.
+
+2. All of the HTTP/2 technologies and optimizations still apply. Intermediaries
+also have all the necessary information to properly handle the communication
+between the client and the server.
+
+3. Clients are able to group streams together for routing purposes,
 such that each individual stream group can be used for a different service,
-within the same HTTP/2 connections.
+within the same HTTP/2 connection.
 
 # Conventions and Terminology
 
@@ -162,12 +173,12 @@ and CDN three different services within one HTTP/2 connection.
   |   +--------------------+  |  |  +------------------>|    RPC   |
   |         XStream (13)      |  |       XStream (7)    +----------+
   |                           |  |
-  |                           |  |  
+  |                           |  |
   |         Stream (21)       |  |      Stream (9)      +----------+
   +---------------------------+  +--------------------->|    CDN   |
                                                         +----------+
 ~~~
-{: #fig-multiplex title="Client opens multiple RStreams, XStreams and an 
+{: #fig-multiplex title="Client opens multiple RStreams, XStreams and an
 HTTP/2 stream within one HTTP/2 connection."}
 
 Reusing one connection for different purposes saves the latency of setting up
@@ -301,9 +312,9 @@ the states maintained for header compression or flow control) may be out of
 sync.
 
 ## Examples
-This section shows HTTP/1.1 request and response messages are transmitted on 
-RStream with regualar HEADERS frames, and on XStream with HTTP/2 XHAEDERS 
-frames. 
+This section shows HTTP/1.1 request and response messages are transmitted on
+RStream with regualar HEADERS frames, and on XStream with HTTP/2 XHAEDERS
+frames.
 
 ~~~
   GET /login HTTP/1.1               HEADERS
@@ -318,7 +329,7 @@ frames.
                                      - END_STREAM
                                        {binary data ... }
 ~~~
-{: #c2s-rstream-req title="The request message and HEADERS frame on an 
+{: #c2s-rstream-req title="The request message and HEADERS frame on an
 RStream"}
 
 ~~~
@@ -331,7 +342,7 @@ RStream"}
                                      - END_STREAM
                                        {binary data...}
 ~~~
-{: #c2s-rstream-resp title="The response message and HEADERS frame on an 
+{: #c2s-rstream-resp title="The response message and HEADERS frame on an
 RStream"}
 
 The server initiate an XStream to this client.
@@ -349,7 +360,7 @@ The server initiate an XStream to this client.
                                      + END_STREAM
                                        {binary data}
 ~~~
-{: #s2c-xstream-req title="The request message and XHEADERS frame on an 
+{: #s2c-xstream-req title="The request message and XHEADERS frame on an
 XStream"}
 
 ~~~
@@ -359,7 +370,7 @@ XStream"}
                                      + END_HEADERS
                                        :status = 200
 ~~~
-{: #s2c-xstream-resp title="The response message and XHEADERS frame on an 
+{: #s2c-xstream-resp title="The response message and XHEADERS frame on an
 XStream"}
 
 
